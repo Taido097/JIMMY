@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useLayoutEffect } from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
 
 const projects = [
   { number: '01', title: 'VOID FORM', year: '2026', image: 'https://images.unsplash.com/photo-1539109136881-3be0616acf4b?auto=format&fit=crop&w=1800&q=85' },
@@ -28,6 +28,46 @@ const introField = `
 ..::..::....::::....::..::....::::....::..::....::::....::..::....::::......
 ..............................................................................
 `;
+
+const scrambleChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#$%&@*?/';
+
+function ScrambleText({ text, className = '' }: { text: string; className?: string }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const intervalRef = useRef<number | null>(null);
+
+  const stop = () => {
+    if (intervalRef.current !== null) window.clearInterval(intervalRef.current);
+    intervalRef.current = null;
+    if (ref.current) ref.current.textContent = text;
+  };
+
+  const scramble = () => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    stop();
+    let frame = 0;
+    const totalFrames = Math.max(12, text.length * 3);
+
+    intervalRef.current = window.setInterval(() => {
+      if (!ref.current) return;
+      const progress = frame / totalFrames;
+      ref.current.textContent = text
+        .split('')
+        .map((char, index) => {
+          if (char === ' ') return ' ';
+          if (index / text.length < progress) return char;
+          return scrambleChars[Math.floor(Math.random() * scrambleChars.length)];
+        })
+        .join('');
+
+      frame += 1;
+      if (frame > totalFrames) stop();
+    }, 28);
+  };
+
+  useEffect(() => stop, []);
+
+  return <span ref={ref} className={className} aria-label={text} onMouseEnter={scramble} onFocus={scramble}>{text}</span>;
+}
 
 export default function Home() {
   useLayoutEffect(() => {
@@ -72,6 +112,8 @@ export default function Home() {
         .intro-status{margin-top:22px;animation:introMeta .55s ease .8s both}
         .intro-progress{position:absolute;left:24px;right:24px;bottom:24px;height:1px;background:rgba(245,245,240,.18)}
         .intro-progress i{display:block;height:100%;background:#f5f5f0;transform-origin:left;animation:introProgress 2.35s cubic-bezier(.65,0,.35,1) .15s both}
+        .scramble-text{display:inline-block;min-width:max-content;font-variant-numeric:tabular-nums}
+        .lookbook-info h2 .scramble-text{display:block}
         @keyframes introFieldA{0%{transform:translate3d(-8%,-18%,0);opacity:0}25%{opacity:.34}100%{transform:translate3d(9%,9%,0);opacity:.18}}
         @keyframes introFieldB{0%{transform:rotate(4deg) translate3d(12%,18%,0);opacity:0}25%{opacity:.3}100%{transform:rotate(4deg) translate3d(-10%,-8%,0);opacity:.14}}
         @keyframes introTitle{0%{opacity:0;transform:scaleY(.05) translateY(80px);filter:blur(8px)}55%{opacity:1;filter:blur(0)}100%{transform:none}}
@@ -95,7 +137,11 @@ export default function Home() {
 
       <header className="nav">
         <a className="brand" href="#top">JIMMY®</a>
-        <nav><a href="#work">Work</a><a href="#about">About</a><a href="#contact">Contact</a></nav>
+        <nav>
+          <a href="#work"><ScrambleText text="WORK" className="scramble-text" /></a>
+          <a href="#about"><ScrambleText text="ABOUT" className="scramble-text" /></a>
+          <a href="#contact"><ScrambleText text="CONTACT" className="scramble-text" /></a>
+        </nav>
       </header>
 
       <section className="hero" id="top">
@@ -121,7 +167,11 @@ export default function Home() {
                 <img src={project.image} alt={`${project.title} fashion collection`} />
                 <div className="ascii-hover" aria-hidden="true"><pre>{asciiTexture}</pre></div>
               </div>
-              <div className="lookbook-info"><span>{project.number}</span><h2>{project.title}</h2><p>{project.year}</p></div>
+              <div className="lookbook-info">
+                <span>{project.number}</span>
+                <h2><ScrambleText text={project.title} className="scramble-text" /></h2>
+                <p>{project.year}</p>
+              </div>
             </article>
           ))}
         </div>
@@ -129,7 +179,7 @@ export default function Home() {
 
       <section className="ascii-break" aria-label="Animated fashion texture">
         <div className="ascii-track" aria-hidden="true"><pre>{asciiTexture}{asciiTexture}{asciiTexture}</pre></div>
-        <p>FORM IN MOTION</p>
+        <p><ScrambleText text="FORM IN MOTION" className="scramble-text" /></p>
       </section>
 
       <section className="about" id="about" data-reveal>
@@ -148,7 +198,7 @@ export default function Home() {
           <label>Email<input type="email" name="email" required /></label>
           <label>Inquiry type<select name="inquiry" defaultValue="Custom piece"><option>Custom piece</option><option>Collection</option><option>Collaboration</option><option>Press</option><option>Other</option></select></label>
           <label>Message<textarea name="message" rows={5} required /></label>
-          <button type="submit">Send inquiry ↗</button>
+          <button type="submit"><ScrambleText text="SEND INQUIRY ↗" className="scramble-text" /></button>
         </form>
         <footer><span>Jimmy © 2026</span><span>Instagram</span><span>Los Angeles</span></footer>
       </section>

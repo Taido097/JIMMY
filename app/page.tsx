@@ -53,32 +53,18 @@ function ScrambleText({ text, className = '' }: { text: string; className?: stri
   return <span ref={ref} className={className} aria-label={text} onMouseEnter={scramble} onFocus={scramble}>{text}</span>;
 }
 
-type Particle = {
-  sx: number;
-  sy: number;
-  tx: number;
-  ty: number;
-  phase: number;
-  size: number;
-};
-
-type AmbientParticle = {
-  x: number;
-  y: number;
-  phase: number;
-  size: number;
-};
+type Particle = { sx: number; sy: number; tx: number; ty: number; phase: number; size: number };
+type AmbientParticle = { x: number; y: number; phase: number; size: number };
 
 function AsciiIntro() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [done, setDone] = useState(false);
-  const [exiting, setExiting] = useState(false);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    if (done) return;
+    if (ready) return;
 
-    const oldBodyOverflow = document.body.style.overflow;
-    const oldHtmlOverflow = document.documentElement.style.overflow;
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
     document.body.style.overflow = 'hidden';
     document.documentElement.style.overflow = 'hidden';
 
@@ -92,17 +78,17 @@ function AsciiIntro() {
     window.addEventListener('keydown', preventKeys, { passive: false });
 
     return () => {
-      document.body.style.overflow = oldBodyOverflow;
-      document.documentElement.style.overflow = oldHtmlOverflow;
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
       window.removeEventListener('wheel', prevent);
       window.removeEventListener('touchmove', prevent);
       window.removeEventListener('keydown', preventKeys);
     };
-  }, [done]);
+  }, [ready]);
 
   useEffect(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      setDone(true);
+      setReady(true);
       return;
     }
 
@@ -112,13 +98,12 @@ function AsciiIntro() {
     if (!ctx) return;
 
     let raf = 0;
-    let finishTimer = 0;
     let particles: Particle[] = [];
     let ambient: AmbientParticle[] = [];
     let width = window.innerWidth;
     let height = window.innerHeight;
-    const start = performance.now();
-    const totalDuration = 7650;
+    const startedAt = performance.now();
+    const animationDuration = 7200;
     const ease = (value: number) => 1 - Math.pow(1 - Math.max(0, Math.min(1, value)), 3);
 
     const buildParticles = () => {
@@ -136,9 +121,7 @@ function AsciiIntro() {
       offscreenContext.font = `700 ${heroSize}px Arial`;
       offscreenContext.textAlign = 'center';
       offscreenContext.textBaseline = 'middle';
-      letters.forEach((letter, index) => {
-        offscreenContext.fillText(letter, width * letterCenters[index], height * 0.5);
-      });
+      letters.forEach((letter, index) => offscreenContext.fillText(letter, width * letterCenters[index], height * 0.5));
 
       const imageData = offscreenContext.getImageData(0, 0, width, height).data;
       const gap = width < 800 ? 6 : 7;
@@ -148,11 +131,9 @@ function AsciiIntro() {
         for (let x = 0; x < width; x += gap) {
           if (imageData[(y * width + x) * 4 + 3] > 120) {
             const angle = Math.random() * Math.PI * 2;
-            const radiusX = width * (0.55 + Math.random() * 0.55);
-            const radiusY = height * (0.45 + Math.random() * 0.55);
             candidates.push({
-              sx: width / 2 + Math.cos(angle) * radiusX,
-              sy: height / 2 + Math.sin(angle) * radiusY,
+              sx: width / 2 + Math.cos(angle) * width * (0.5 + Math.random() * 0.45),
+              sy: height / 2 + Math.sin(angle) * height * (0.4 + Math.random() * 0.5),
               tx: x,
               ty: y,
               phase: Math.random() * Math.PI * 2,
@@ -162,12 +143,10 @@ function AsciiIntro() {
         }
       }
 
-      const maxParticles = width < 800 ? 3600 : 5200;
+      const maxParticles = width < 800 ? 3400 : 5000;
       const stride = Math.max(1, Math.ceil(candidates.length / maxParticles));
       particles = candidates.filter((_, index) => index % stride === 0).slice(0, maxParticles);
-
-      const ambientCount = width < 800 ? 450 : 850;
-      ambient = Array.from({ length: ambientCount }, () => ({
+      ambient = Array.from({ length: width < 800 ? 420 : 780 }, () => ({
         x: Math.random() * width,
         y: Math.random() * height,
         phase: Math.random() * Math.PI * 2,
@@ -193,10 +172,8 @@ function AsciiIntro() {
       particles.forEach((particle, index) => {
         const movement = ease(progress);
         const remaining = 1 - movement;
-        const driftX = Math.sin(particle.phase + index * 0.015 + progress * 5) * 42 * remaining;
-        const driftY = Math.cos(particle.phase + index * 0.011 + progress * 4) * 24 * remaining;
-        const x = particle.sx + (particle.tx - particle.sx) * movement + driftX;
-        const y = particle.sy + (particle.ty - particle.sy) * movement + driftY;
+        const x = particle.sx + (particle.tx - particle.sx) * movement + Math.sin(particle.phase + index * 0.015 + progress * 5) * 38 * remaining;
+        const y = particle.sy + (particle.ty - particle.sy) * movement + Math.cos(particle.phase + index * 0.011 + progress * 4) * 22 * remaining;
         ctx.rect(x, y, particle.size, particle.size);
       });
       ctx.fill();
@@ -206,63 +183,56 @@ function AsciiIntro() {
       ctx.fillStyle = `rgba(245,245,240,${alpha})`;
       ctx.beginPath();
       ambient.forEach((particle) => {
-        const x = particle.x + Math.sin(time * 0.7 + particle.phase) * 10;
-        const y = particle.y + Math.cos(time * 0.55 + particle.phase) * 7;
-        ctx.rect(x, y, particle.size, particle.size);
+        ctx.rect(
+          particle.x + Math.sin(time * 0.7 + particle.phase) * 10,
+          particle.y + Math.cos(time * 0.55 + particle.phase) * 7,
+          particle.size,
+          particle.size,
+        );
       });
       ctx.fill();
     };
 
-    const drawMeta = (alpha: number) => {
-      ctx.globalAlpha = alpha;
+    const drawMeta = () => {
+      ctx.globalAlpha = 0.9;
       ctx.fillStyle = '#f5f5f0';
       ctx.font = '8px "Courier New", monospace';
       ctx.textAlign = 'left';
       ctx.fillText('JIMMY®', 18, 22);
       ctx.textAlign = 'right';
-      ctx.fillText('WORK   ABOUT   CONTACT', width - 18, 22);
+      ctx.fillText('SCROLL TO ENTER', width - 18, 22);
       ctx.textAlign = 'left';
       ctx.globalAlpha = 1;
     };
 
     const draw = (now: number) => {
-      const elapsed = now - start;
+      const elapsed = now - startedAt;
       const time = elapsed / 1000;
 
-      ctx.globalAlpha = 1;
       ctx.fillStyle = '#000';
       ctx.fillRect(0, 0, width, height);
 
-      if (elapsed < 1600) {
-        const progress = elapsed / 1600;
+      if (elapsed < 1500) {
+        const progress = elapsed / 1500;
         drawAmbient(time, 0.25);
         drawDots(progress * 0.2, 0.38 + progress * 0.25);
-        drawMeta(0.9);
-      } else if (elapsed < 5200) {
-        const progress = (elapsed - 1600) / 3600;
+      } else if (elapsed < 5100) {
+        const progress = (elapsed - 1500) / 3600;
         drawAmbient(time, 0.22 * (1 - progress));
         drawDots(0.2 + progress * 0.8, 0.68 + progress * 0.3);
-        drawMeta(0.9);
-      } else if (elapsed < 6350) {
+      } else {
         particles.forEach((particle) => {
           ctx.fillStyle = 'rgba(245,245,240,0.98)';
           ctx.fillRect(particle.tx, particle.ty, particle.size, particle.size);
         });
-        drawMeta(0.9);
-      } else if (elapsed < 7200) {
-        const fade = 1 - ease((elapsed - 6350) / 850);
-        particles.forEach((particle) => {
-          ctx.fillStyle = `rgba(245,245,240,${fade})`;
-          ctx.fillRect(particle.tx, particle.ty, particle.size, particle.size);
-        });
-        drawMeta(fade * 0.9);
       }
 
-      if (elapsed < totalDuration) {
+      drawMeta();
+
+      if (elapsed < animationDuration) {
         raf = requestAnimationFrame(draw);
       } else {
-        setExiting(true);
-        finishTimer = window.setTimeout(() => setDone(true), 450);
+        setReady(true);
       }
     };
 
@@ -272,13 +242,16 @@ function AsciiIntro() {
 
     return () => {
       cancelAnimationFrame(raf);
-      window.clearTimeout(finishTimer);
       window.removeEventListener('resize', resize);
     };
   }, []);
 
-  if (done) return null;
-  return <div className={`ascii-intro${exiting ? ' is-exiting' : ''}`} aria-hidden="true"><canvas ref={canvasRef} /></div>;
+  return (
+    <section className={`ascii-intro-section${ready ? ' is-ready' : ''}`} aria-label="Jimmy introduction">
+      <canvas ref={canvasRef} aria-hidden="true" />
+      <div className="intro-scroll-cue" aria-hidden="true">SCROLL<br />↓</div>
+    </section>
+  );
 }
 
 export default function Home() {
@@ -301,7 +274,7 @@ export default function Home() {
     const elements = document.querySelectorAll('[data-reveal]');
     const observer = new IntersectionObserver(
       (entries) => entries.forEach((entry) => entry.isIntersecting && entry.target.classList.add('is-visible')),
-      { threshold: 0.04, rootMargin: '0px 0px 8% 0px' }
+      { threshold: 0.04, rootMargin: '0px 0px 8% 0px' },
     );
     elements.forEach((element) => observer.observe(element));
     return () => observer.disconnect();
@@ -310,12 +283,14 @@ export default function Home() {
   return (
     <main>
       <style jsx global>{`
-        .ascii-intro{position:fixed;inset:0;z-index:1000;background:#000;overflow:hidden;opacity:1;pointer-events:auto;touch-action:none;transition:opacity .45s ease}
-        .ascii-intro.is-exiting{opacity:0}
-        .ascii-intro canvas{display:block;width:100%;height:100%}
+        .ascii-intro-section{position:relative;height:100svh;min-height:620px;background:#000;overflow:hidden;z-index:40;touch-action:none}
+        .ascii-intro-section.is-ready{touch-action:auto}
+        .ascii-intro-section canvas{display:block;width:100%;height:100%}
+        .intro-scroll-cue{position:absolute;left:50%;bottom:22px;transform:translateX(-50%) translateY(10px);color:#f5f5f0;font:8px/1.35 "Courier New",monospace;letter-spacing:.16em;text-align:center;opacity:0;transition:opacity .45s ease,transform .45s ease}
+        .ascii-intro-section.is-ready .intro-scroll-cue{opacity:.78;transform:translateX(-50%) translateY(0)}
         .scramble-text{display:inline-block;min-width:max-content;font-variant-numeric:tabular-nums}
         .lookbook-info h2 .scramble-text{display:block}
-        @media(prefers-reduced-motion:reduce){.ascii-intro{display:none}}
+        @media(prefers-reduced-motion:reduce){.ascii-intro-section{height:100svh;touch-action:auto}.intro-scroll-cue{opacity:.78;transform:translateX(-50%)}}
       `}</style>
 
       <AsciiIntro />

@@ -19,26 +19,25 @@ GARMENT / SILHOUETTE / MOVEMENT
 JIMMY_2026  //////  ARCHIVE_03
 `;
 
+const introField = `
+..............................................................................
+..::..::....::::....::..::....::::....::..::....::::....::..::....::::......
+..............................................................................
+///// FORM_01 ///// GARMENT_02 ///// MOTION_03 ///// ARCHIVE_04 /////
+..............................................................................
+..::..::....::::....::..::....::::....::..::....::::....::..::....::::......
+..............................................................................
+`;
+
 export default function Home() {
   useLayoutEffect(() => {
-    if ('scrollRestoration' in window.history) {
-      window.history.scrollRestoration = 'manual';
-    }
-
-    if (window.location.hash) {
-      window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
-    }
+    if ('scrollRestoration' in window.history) window.history.scrollRestoration = 'manual';
+    if (window.location.hash) window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
 
     const resetToTop = () => window.scrollTo(0, 0);
     resetToTop();
-
     const frame = window.requestAnimationFrame(resetToTop);
-    const timers = [
-      window.setTimeout(resetToTop, 0),
-      window.setTimeout(resetToTop, 80),
-      window.setTimeout(resetToTop, 250),
-      window.setTimeout(resetToTop, 700),
-    ];
+    const timers = [0, 80, 250, 700].map((delay) => window.setTimeout(resetToTop, delay));
 
     window.addEventListener('pageshow', resetToTop);
     window.addEventListener('load', resetToTop);
@@ -57,14 +56,22 @@ export default function Home() {
       (entries) => entries.forEach((entry) => entry.isIntersecting && entry.target.classList.add('is-visible')),
       { threshold: 0.04, rootMargin: '0px 0px 8% 0px' }
     );
-
     elements.forEach((element) => observer.observe(element));
     return () => observer.disconnect();
   }, []);
 
   return (
     <main>
-      <div className="loader" aria-hidden="true"><span>JIMMY®</span></div>
+      <div className="loader" aria-hidden="true">
+        <div className="intro-grid intro-grid-a"><pre>{introField}{introField}{introField}</pre></div>
+        <div className="intro-grid intro-grid-b"><pre>{introField}{introField}</pre></div>
+        <div className="intro-center">
+          <span className="intro-index">JIMMY / 2026</span>
+          <strong>JIMMY</strong>
+          <span className="intro-status">FASHION DESIGNER — LOADING ARCHIVE</span>
+        </div>
+        <div className="intro-progress"><i /></div>
+      </div>
 
       <header className="nav">
         <a className="brand" href="#top">JIMMY®</a>
@@ -101,9 +108,7 @@ export default function Home() {
       </section>
 
       <section className="ascii-break" aria-label="Animated fashion texture">
-        <div className="ascii-track" aria-hidden="true">
-          <pre>{asciiTexture}{asciiTexture}{asciiTexture}</pre>
-        </div>
+        <div className="ascii-track" aria-hidden="true"><pre>{asciiTexture}{asciiTexture}{asciiTexture}</pre></div>
         <p>FORM IN MOTION</p>
       </section>
 

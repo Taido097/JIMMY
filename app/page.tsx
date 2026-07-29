@@ -8,27 +8,6 @@ const projects = [
   { number: '03', title: 'NOIR MOTION', year: '2025', image: 'https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=1800&q=85' },
 ];
 
-const asciiFigure = `
-        .........
-      ..:::::::::..
-     .:::::@@::::::.
-     :::::@@@@::::::
-      :::@@@@@@:::
-       ::@@@@@@::
-        :@@@@@@:
-       .:@@@@@@:.
-      .::@@@@@@::.
-     .:::@@@@@@:::.
-    .::::@@@@@@::::.
-   .:::::@@@@@@:::::.
-  .::::::@@@@@@::::::.
- .:::::::@@@@@@:::::::.
-:::::::::@@@@@@:::::::::
-        @@@@@@@@
-        @@@@@@@@
-        @@@@@@@@
-`;
-
 const asciiTexture = `
 FASHION_001  //////  FORM_002
 ................................
@@ -93,7 +72,6 @@ export default function Home() {
       </header>
 
       <section className="hero" id="top">
-        <div className="ascii-layer ascii-left" aria-hidden="true"><pre>{asciiFigure}</pre></div>
         <div className="ascii-layer ascii-right" aria-hidden="true"><pre>{asciiTexture}</pre></div>
         <p className="hero-label hero-label-left">Fashion Designer</p>
         <p className="hero-label hero-label-right">Los Angeles · 2026</p>
@@ -114,7 +92,7 @@ export default function Home() {
             <article className={`lookbook-card card-${index + 1}`} key={project.number} data-reveal>
               <div className="lookbook-image">
                 <img src={project.image} alt={`${project.title} fashion collection`} />
-                <div className="ascii-hover" aria-hidden="true"><pre>{index === 1 ? asciiTexture : asciiFigure}</pre></div>
+                <div className="ascii-hover" aria-hidden="true"><pre>{asciiTexture}</pre></div>
               </div>
               <div className="lookbook-info"><span>{project.number}</span><h2>{project.title}</h2><p>{project.year}</p></div>
             </article>

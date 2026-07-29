@@ -60,23 +60,24 @@ function ScrambleText({ text, className = '' }: { text: string; className?: stri
   );
 }
 
-type MatrixParticle = {
+type WordGlyph = {
   tx: number;
   ty: number;
   letter: number;
+  startY: number;
   phase: number;
   glyphSeed: number;
   speed: number;
   brightness: number;
 };
 
-type AmbientGlyph = {
+type RainGlyph = {
   x: number;
-  y: number;
-  phase: number;
+  startY: number;
   glyphSeed: number;
   speed: number;
   alpha: number;
+  trail: boolean;
 };
 
 function AsciiIntro() {
@@ -154,20 +155,20 @@ function AsciiIntro() {
     if (!ctx) return;
 
     let raf = 0;
-    let particles: MatrixParticle[] = [];
-    let ambient: AmbientGlyph[] = [];
+    let wordGlyphs: WordGlyph[] = [];
+    let rainGlyphs: RainGlyph[] = [];
     let width = window.innerWidth;
     let height = window.innerHeight;
     let heroSize = 0;
     let glyphSize = 8.5;
+    let rowGap = 66;
 
     const centers = [0.065, 0.245, 0.44, 0.685, 0.925];
     const letters = ['J', 'I', 'M', 'M', 'Y'];
     const startedAt = performance.now();
-    const preField = 700;
-    const letterDuration = 580;
-    const finalHold = 900;
-    const animationDuration = preField + letterDuration * letters.length + finalHold;
+    const rainLeadIn = 780;
+    const letterDuration = 650;
+    const animationDuration = rainLeadIn + letterDuration * letters.length;
     const clamp = (value: number) => Math.max(0, Math.min(1, value));
     const smoother = (value: number) => {
       const p = clamp(value);
@@ -177,7 +178,7 @@ function AsciiIntro() {
     const hash = (seed: number) => fract(Math.sin(seed * 12.9898) * 43758.5453);
     const glyphAt = (seed: number) => matrixChars[Math.abs(Math.floor(seed)) % matrixChars.length];
 
-    const buildParticles = () => {
+    const buildField = () => {
       const offscreen = document.createElement('canvas');
       offscreen.width = width;
       offscreen.height = height;
@@ -186,6 +187,7 @@ function AsciiIntro() {
 
       heroSize = Math.min(width < 800 ? width * 0.27 : width * 0.22, 350);
       glyphSize = width < 800 ? 7.2 : 8.5;
+      rowGap = width < 800 ? 58 : 66;
       octx.fillStyle = '#fff';
       octx.font = `700 ${heroSize}px Arial`;
       octx.textAlign = 'center';
@@ -195,11 +197,11 @@ function AsciiIntro() {
       });
 
       const data = octx.getImageData(0, 0, width, height).data;
-      const gap = width < 800 ? 10 : 12;
-      const candidates: MatrixParticle[] = [];
+      const maskGap = width < 800 ? 11 : 13;
+      const candidates: WordGlyph[] = [];
 
-      for (let y = 0; y < height; y += gap) {
-        for (let x = 0; x < width; x += gap) {
+      for (let y = 0; y < height; y += maskGap) {
+        for (let x = 0; x < width; x += maskGap) {
           if (data[(y * width + x) * 4 + 3] <= 120) continue;
 
           let letter = 0;
@@ -217,36 +219,35 @@ function AsciiIntro() {
             tx: x,
             ty: y,
             letter,
-            phase: hash(seed + 1) * Math.PI * 2,
-            glyphSeed: Math.floor(hash(seed + 2) * 100000),
-            speed: 34 + hash(seed + 3) * 44,
-            brightness: 0.58 + hash(seed + 4) * 0.42,
-          });
-        }
-      }
-
-      const maxParticles = width < 800 ? 760 : 1350;
-      const stride = Math.max(1, Math.ceil(candidates.length / maxParticles));
-      particles = candidates.filter((_, index) => index % stride === 0).slice(0, maxParticles);
-
-      const columnGap = width < 800 ? 22 : 26;
-      const nextAmbient: AmbientGlyph[] = [];
-      for (let x = columnGap / 2; x < width; x += columnGap) {
-        const columnSeed = x * 1.913;
-        const count = 2 + Math.floor(hash(columnSeed) * 3);
-        for (let row = 0; row < count; row += 1) {
-          const seed = columnSeed + row * 31.7;
-          nextAmbient.push({
-            x,
-            y: hash(seed + 1) * height,
+            startY: hash(seed + 1) * (height + 120) - 60,
             phase: hash(seed + 2) * Math.PI * 2,
             glyphSeed: Math.floor(hash(seed + 3) * 100000),
-            speed: 18 + hash(seed + 4) * 42,
-            alpha: 0.08 + hash(seed + 5) * 0.18,
+            speed: 44 + hash(seed + 4) * 64,
+            brightness: 0.58 + hash(seed + 5) * 0.42,
           });
         }
       }
-      ambient = nextAmbient;
+
+      const maxWordGlyphs = width < 800 ? 700 : 1120;
+      const stride = Math.max(1, Math.ceil(candidates.length / maxWordGlyphs));
+      wordGlyphs = candidates.filter((_, index) => index % stride === 0).slice(0, maxWordGlyphs);
+
+      const columnGap = width < 800 ? 18 : 22;
+      const nextRain: RainGlyph[] = [];
+      for (let x = columnGap / 2; x < width; x += columnGap) {
+        for (let y = -rowGap; y < height + rowGap; y += rowGap) {
+          const seed = x * 1.913 + y * 0.817;
+          nextRain.push({
+            x: x + (hash(seed + 1) - 0.5) * columnGap * 0.34,
+            startY: y + (hash(seed + 2) - 0.5) * rowGap * 0.7,
+            glyphSeed: Math.floor(hash(seed + 3) * 100000),
+            speed: 34 + hash(seed + 4) * 68,
+            alpha: 0.09 + hash(seed + 5) * 0.24,
+            trail: hash(seed + 6) > 0.68,
+          });
+        }
+      }
+      rainGlyphs = nextRain;
     };
 
     const resize = () => {
@@ -259,62 +260,59 @@ function AsciiIntro() {
       canvas.style.height = `${height}px`;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.imageSmoothingEnabled = false;
-      buildParticles();
+      buildField();
     };
 
-    const drawAmbient = (elapsed: number, alphaScale: number) => {
+    const drawRain = (elapsed: number, alphaScale: number) => {
       const time = elapsed / 1000;
-      const cycleHeight = height + 90;
-      const glyphFrame = Math.floor(elapsed / 110);
-      ctx.font = `${Math.max(7, glyphSize - 0.5)}px "Courier New", monospace`;
+      const cycleHeight = height + rowGap * 2;
+      const glyphFrame = Math.floor(elapsed / 96);
+      ctx.font = `${Math.max(7, glyphSize - 0.25)}px "Courier New", monospace`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
 
-      ambient.forEach((glyph, index) => {
-        const y = ((glyph.y + time * glyph.speed + glyph.phase * 13) % cycleHeight) - 45;
+      rainGlyphs.forEach((glyph, index) => {
+        const y = ((glyph.startY + time * glyph.speed + rowGap) % cycleHeight) - rowGap;
         const character = glyphAt(glyph.glyphSeed + glyphFrame * 7 + index * 3);
         const alpha = glyph.alpha * alphaScale;
 
         ctx.fillStyle = `rgba(245,245,240,${alpha})`;
         ctx.fillText(character, glyph.x, y);
-        ctx.fillStyle = `rgba(245,245,240,${alpha * 0.32})`;
-        ctx.fillText(glyphAt(glyph.glyphSeed + glyphFrame * 5 + 11), glyph.x, y - glyphSize * 1.45);
+
+        if (glyph.trail) {
+          ctx.fillStyle = `rgba(245,245,240,${alpha * 0.22})`;
+          ctx.fillText(glyphAt(glyph.glyphSeed + glyphFrame * 5 + 11), glyph.x, y - rowGap * 0.34);
+        }
       });
     };
 
-    const drawWordField = (elapsed: number) => {
+    const drawWord = (elapsed: number) => {
       const time = elapsed / 1000;
-      const bandTop = height * 0.5 - heroSize * 0.56;
-      const bandHeight = heroSize * 1.12;
+      const cycleHeight = height + 120;
       const glyphFrame = Math.floor(elapsed / 78);
       ctx.font = `${glyphSize}px "Courier New", monospace`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
 
-      particles.forEach((particle, index) => {
-        const letterStart = preField + particle.letter * letterDuration;
+      wordGlyphs.forEach((glyph, index) => {
+        const letterStart = rainLeadIn + glyph.letter * letterDuration;
         const lock = smoother((elapsed - letterStart) / letterDuration);
         const remaining = 1 - lock;
 
-        const rawY = bandTop + (
-          ((particle.ty - bandTop) + time * particle.speed + particle.phase * bandHeight) % bandHeight
-        );
-        let wrappedDelta = rawY - particle.ty;
-        if (wrappedDelta > bandHeight / 2) wrappedDelta -= bandHeight;
-        if (wrappedDelta < -bandHeight / 2) wrappedDelta += bandHeight;
-
-        const xDrift = (
-          Math.sin(time * 2.3 + particle.phase) * 5.5
-          + Math.sin(time * 7.2 + particle.phase * 1.7) * 1.2
+        const absoluteY = glyph.startY + time * glyph.speed;
+        const targetCycle = Math.round((absoluteY - glyph.ty) / cycleHeight);
+        const targetOnCycle = glyph.ty + targetCycle * cycleHeight;
+        const lockedAbsoluteY = absoluteY + (targetOnCycle - absoluteY) * lock;
+        const y = ((lockedAbsoluteY + 60) % cycleHeight) - 60;
+        const x = glyph.tx + (
+          Math.sin(time * 2.2 + glyph.phase) * 3.4
+          + Math.sin(time * 5.8 + glyph.phase * 1.7) * 0.8
         ) * remaining;
-        const x = particle.tx + xDrift;
-        const y = particle.ty + wrappedDelta * remaining;
 
-        const movingSeed = particle.glyphSeed + glyphFrame * 11 + index * 5;
-        const stableSeed = particle.glyphSeed + particle.letter * 29;
-        const character = glyphAt(lock > 0.92 ? stableSeed : movingSeed);
-        const shimmer = lock > 0.96 ? Math.sin(time * 1.8 + particle.phase) * 0.035 : 0;
-        const alpha = Math.min(0.98, 0.28 + particle.brightness * 0.3 + lock * 0.38 + shimmer);
+        const movingSeed = glyph.glyphSeed + glyphFrame * 11 + index * 5;
+        const stableSeed = glyph.glyphSeed + glyph.letter * 29;
+        const character = glyphAt(lock > 0.9 ? stableSeed : movingSeed);
+        const alpha = Math.min(0.98, 0.3 + glyph.brightness * 0.28 + lock * 0.4);
 
         ctx.fillStyle = `rgba(245,245,240,${alpha})`;
         ctx.fillText(character, x, y);
@@ -334,17 +332,18 @@ function AsciiIntro() {
     };
 
     const draw = (now: number) => {
-      const elapsed = now - startedAt;
-      const overallLock = clamp((elapsed - preField) / (letterDuration * letters.length));
+      const rawElapsed = now - startedAt;
+      const elapsed = Math.min(rawElapsed, animationDuration);
+      const overallLock = clamp((elapsed - rainLeadIn) / (letterDuration * letters.length));
 
       ctx.globalAlpha = 1;
       ctx.fillStyle = '#000';
       ctx.fillRect(0, 0, width, height);
-      drawAmbient(elapsed, 1 - overallLock * 0.78);
-      drawWordField(elapsed);
+      drawRain(elapsed, 1 - overallLock * 0.78);
+      drawWord(elapsed);
       drawMeta();
 
-      if (elapsed < animationDuration) {
+      if (rawElapsed < animationDuration) {
         raf = requestAnimationFrame(draw);
       } else {
         setReady(true);

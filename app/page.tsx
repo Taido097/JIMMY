@@ -51,7 +51,7 @@ function ScrambleText({ text, className = '' }: { text: string; className?: stri
     }, 28);
   };
 
-  useEffect(() => stop, []);
+  useEffect(() => () => stop(), []);
 
   return (
     <span ref={ref} className={className} aria-label={text} onMouseEnter={scramble} onFocus={scramble}>
@@ -152,6 +152,7 @@ function AsciiIntro() {
     if (!ctx) return;
 
     let raf = 0;
+    let readySignaled = false;
     let wordGlyphs: WordGlyph[] = [];
     let rainGlyphs: RainGlyph[] = [];
     let width = window.innerWidth;
@@ -165,7 +166,9 @@ function AsciiIntro() {
     const startedAt = performance.now();
     const rainLeadIn = 760;
     const letterDuration = 660;
-    const animationDuration = rainLeadIn + letterDuration * letters.length;
+    const formEnd = rainLeadIn + letterDuration * letters.length;
+    const settleDuration = 1800;
+    const readyAt = formEnd + settleDuration;
     const clamp = (value: number) => Math.max(0, Math.min(1, value));
     const smoother = (value: number) => {
       const p = clamp(value);
@@ -299,18 +302,28 @@ function AsciiIntro() {
       });
     };
 
-    const drawWord = (elapsed: number, overallLock: number) => {
-      const time = elapsed / 1000;
+    const drawWord = (elapsed: number) => {
+      const motionElapsed = Math.min(elapsed, formEnd);
+      const time = motionElapsed / 1000;
       const cycleHeight = height + 120;
-      const glyphFrame = Math.floor(elapsed / 64);
-      const wordFinished = overallLock >= 1;
+      const fastFrame = Math.floor(motionElapsed / 58);
+      const settleProgress = smoother((elapsed - formEnd) / settleDuration);
+      const postFormElapsed = Math.max(0, elapsed - formEnd);
+      const syncedInterval = 72 + settleProgress * 580;
+      const syncedFrame = Math.floor(postFormElapsed / syncedInterval);
+      const fullySettled = settleProgress >= 0.995;
+      const slowBlinkCycle = fullySettled ? postFormElapsed - settleDuration : 0;
+      const slowBlinkFrame = Math.floor(Math.max(0, slowBlinkCycle) / 1250);
+      const slowBlinkPhase = ((Math.max(0, slowBlinkCycle) % 1250) + 1250) % 1250;
+      const slowScrambleBlink = fullySettled && slowBlinkPhase < 115;
+
       ctx.font = `${glyphSize}px "Courier New", monospace`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
 
       wordGlyphs.forEach((glyph, index) => {
         const letterStart = rainLeadIn + glyph.letter * letterDuration;
-        const lock = smoother((elapsed - letterStart) / letterDuration);
+        const lock = smoother((motionElapsed - letterStart) / letterDuration);
         const remaining = 1 - lock;
 
         const absoluteY = glyph.startY + time * glyph.speed;
@@ -323,11 +336,25 @@ function AsciiIntro() {
           + Math.sin(time * 5.8 + glyph.phase * 1.7) * 0.7
         ) * remaining;
 
-        const movingSeed = glyph.glyphSeed + glyphFrame * 13 + index * 5;
-        const stableSeed = glyph.glyphSeed + glyph.letter * 29;
-        const character = glyphAt(wordFinished ? stableSeed : movingSeed);
-        const pulse = wordFinished ? 0 : Math.sin(time * 7.5 + glyph.phase) * 0.04;
-        const alpha = Math.min(0.98, 0.31 + glyph.brightness * 0.28 + lock * 0.38 + pulse);
+        let character: string;
+        if (elapsed < formEnd) {
+          character = glyphAt(glyph.glyphSeed + fastFrame * 13 + index * 5);
+        } else if (!fullySettled) {
+          character = glyphAt(syncedFrame * 17 + glyph.letter * 31);
+        } else if (slowScrambleBlink) {
+          character = glyphAt(slowBlinkFrame * 19 + glyph.letter * 31);
+        } else {
+          character = letters[glyph.letter];
+        }
+
+        const synchronizedPulse = elapsed >= formEnd
+          ? Math.sin(postFormElapsed / 1000 * Math.PI * 1.15 + glyph.letter * 0.55) * 0.055
+          : 0;
+        const blinkDip = slowScrambleBlink ? -0.16 : 0;
+        const alpha = Math.min(0.98, Math.max(
+          0.26,
+          0.31 + glyph.brightness * 0.28 + lock * 0.38 + synchronizedPulse + blinkDip,
+        ));
 
         ctx.fillStyle = `rgba(245,245,240,${alpha})`;
         ctx.fillText(character, x, y);
@@ -346,7 +373,7 @@ function AsciiIntro() {
       ctx.textAlign = 'left';
       ctx.fillText(topWord, 18, 22);
 
-      if (overallLock >= 1) {
+      if (elapsed >= readyAt) {
         ctx.textAlign = 'right';
         ctx.fillText('SCROLL TO ENTER', width - 18, 22);
       }
@@ -356,22 +383,23 @@ function AsciiIntro() {
     };
 
     const draw = (now: number) => {
-      const rawElapsed = now - startedAt;
-      const elapsed = Math.min(rawElapsed, animationDuration);
+      const elapsed = now - startedAt;
+      const rainElapsed = Math.min(elapsed, formEnd);
       const overallLock = clamp((elapsed - rainLeadIn) / (letterDuration * letters.length));
 
       ctx.globalAlpha = 1;
       ctx.fillStyle = '#000';
       ctx.fillRect(0, 0, width, height);
-      drawRain(elapsed, 1 - overallLock * 0.74);
-      drawWord(elapsed, overallLock);
+      drawRain(rainElapsed, Math.max(0, 1 - overallLock));
+      drawWord(elapsed);
       drawMeta(elapsed, overallLock);
 
-      if (rawElapsed < animationDuration) {
-        raf = requestAnimationFrame(draw);
-      } else {
+      if (elapsed >= readyAt && !readySignaled) {
+        readySignaled = true;
         setReady(true);
       }
+
+      raf = requestAnimationFrame(draw);
     };
 
     resize();

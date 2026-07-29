@@ -2,136 +2,84 @@
 
 import { useEffect } from 'react';
 
-const works = [
-  {
-    id: '01',
-    title: 'VOID FORM',
-    meta: 'Editorial / 2026',
-    image: 'https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=1800&q=90',
-    alt: 'Editorial fashion model in a structured black outfit',
-  },
-  {
-    id: '02',
-    title: 'SILENT STRUCTURE',
-    meta: 'Campaign / 2026',
-    image: 'https://images.unsplash.com/photo-1539109136881-3be0616acf4b?auto=format&fit=crop&w=1800&q=90',
-    alt: 'Fashion model wearing a tailored neutral garment',
-  },
-  {
-    id: '03',
-    title: 'NOIR MOTION',
-    meta: 'Runway / 2025',
-    image: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1800&q=90',
-    alt: 'Contemporary fashion clothing displayed in a studio setting',
-  },
+const projects = [
+  { number: '01', title: 'VOID FORM', type: 'Editorial', year: '2026', image: 'https://images.unsplash.com/photo-1539109136881-3be0616acf4b?auto=format&fit=crop&w=1800&q=85' },
+  { number: '02', title: 'SILENT STRUCTURE', type: 'Campaign', year: '2026', image: 'https://images.unsplash.com/photo-1509631179647-0177331693ae?auto=format&fit=crop&w=1800&q=85' },
+  { number: '03', title: 'NOIR MOTION', type: 'Runway', year: '2025', image: 'https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=1800&q=85' },
 ];
 
 export default function Home() {
   useEffect(() => {
-    const items = document.querySelectorAll<HTMLElement>('[data-reveal]');
+    const elements = document.querySelectorAll('[data-reveal]');
     const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('is-visible');
-            observer.unobserve(entry.target);
-          }
-        });
-      },
-      { threshold: 0.15, rootMargin: '0px 0px -8% 0px' },
+      (entries) => entries.forEach((entry) => entry.isIntersecting && entry.target.classList.add('is-visible')),
+      { threshold: 0.14 }
     );
-
-    items.forEach((item) => observer.observe(item));
+    elements.forEach((element) => observer.observe(element));
     return () => observer.disconnect();
   }, []);
 
   return (
     <main>
-      <div className="page-wipe" aria-hidden="true" />
+      <div className="loader" aria-hidden="true"><span>JIMMY®</span></div>
 
       <header className="nav">
-        <a className="brand" href="#top">JIMMY</a>
-        <nav>
-          <a href="#work">Work</a>
-          <a href="#about">About</a>
-          <a href="#contact">Contact</a>
-        </nav>
+        <a className="brand" href="#top">JIMMY®</a>
+        <p>Independent fashion practice<br />Los Angeles — 2026</p>
+        <nav><a href="#work">Index</a><a href="#about">Info</a><a href="#contact">Contact</a></nav>
       </header>
 
       <section className="hero" id="top">
-        <div className="hero-kicker hero-enter delay-1">Fashion Designer · Creative Direction · Los Angeles</div>
-        <h1 className="hero-enter delay-2"><span>JIM</span><span>MY</span></h1>
-        <div className="hero-art hero-enter delay-3">
-          <img
-            src="https://images.unsplash.com/photo-1506629082955-511b1aa562c8?auto=format&fit=crop&w=1800&q=90"
-            alt="Avant-garde fashion model wearing a sculptural garment"
-          />
-          <div className="image-shade" />
+        <div className="hero-grid" aria-hidden="true">{Array.from({ length: 24 }).map((_, i) => <i key={i} />)}</div>
+        <p className="hero-label hero-label-left">Fashion / Image / Direction</p>
+        <p className="hero-label hero-label-right">Scroll to unfold ↓</p>
+        <h1 aria-label="Jimmy"><span>J</span><span>I</span><span>M</span><span>M</span><span>Y</span></h1>
+        <div className="hero-image-wrap">
+          <img className="hero-image" src="https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1800&q=90" alt="Editorial fashion clothing rack" />
+          <div className="scanlines" />
         </div>
-        <p className="hero-copy hero-enter delay-4">Clothing as image.<br />Movement as language.</p>
-        <a className="scroll hero-enter delay-4" href="#work">Scroll to selected work ↓</a>
+        <p className="hero-statement">Clothing as image.<br />Movement as language.</p>
       </section>
 
-      <section className="intro" data-reveal>
-        <p>Jimmy develops image-led fashion stories across garment, styling, and creative direction.</p>
-        <span>Selected work 2025—2026</span>
+      <section className="ticker" aria-label="Fashion disciplines">
+        <div>DESIGN — STYLING — IMAGE — MOVEMENT — GARMENT — DIRECTION — DESIGN — STYLING — IMAGE — MOVEMENT —</div>
       </section>
 
-      <section className="editorial-break" data-reveal>
-        <img
-          src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=2200&q=90"
-          alt="Editorial fashion portrait with flowing clothing"
-        />
-        <div className="editorial-caption">
-          <span>Study 01</span>
-          <p>Silhouette, tension, and the space between movement.</p>
-        </div>
+      <section className="statement" data-reveal>
+        <span>( 01 / PRACTICE )</span>
+        <p>Jimmy creates fashion worlds built from silhouette, tension, gesture, and restraint.</p>
       </section>
 
-      <section className="works" id="work">
-        {works.map((work, index) => (
-          <article className="work" key={work.id} data-reveal>
-            <div className="work-image">
-              <img src={work.image} alt={work.alt} loading={index === 0 ? 'eager' : 'lazy'} />
-              <div className="work-overlay" />
+      <section className="index" id="work">
+        <div className="index-head"><span>Selected work</span><span>2025—2026</span></div>
+        {projects.map((project) => (
+          <article className="project" key={project.number} data-reveal>
+            <div className="project-line">
+              <span>{project.number}</span><h2>{project.title}</h2><p>{project.type}<br />{project.year}</p><b>↗</b>
             </div>
-            <div className="work-info">
-              <span>{work.id}</span>
-              <h2>{work.title}</h2>
-              <p>{work.meta}</p>
-              <a href="#contact">View project ↗</a>
-            </div>
+            <div className="project-media"><img src={project.image} alt={`${project.title} fashion project`} /></div>
           </article>
         ))}
       </section>
 
-      <section className="detail-grid" data-reveal>
-        <div className="detail-image tall">
-          <img src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=1400&q=90" alt="Model wearing a statement fashion look" />
-        </div>
-        <div className="detail-copy">
-          <span>Garment Study</span>
-          <h3>Texture becomes architecture.</h3>
-        </div>
-        <div className="detail-image short">
-          <img src="https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1400&q=90" alt="Close-up detail of luxury clothing fabric" />
+      <section className="type-play" aria-label="Experimental typography">
+        <div className="type-orbit">JIMMY JIMMY JIMMY JIMMY JIMMY JIMMY</div>
+        <p>FORM<br />FOLLOWS<br />FEELING</p>
+      </section>
+
+      <section className="about" id="about" data-reveal>
+        <div className="about-meta"><span>( 02 / PROFILE )</span><span>Los Angeles, CA</span></div>
+        <h2>Not simply clothes.<br />A visual system for<br />how a body occupies space.</h2>
+        <div className="about-copy">
+          <p>Jimmy works across fashion design, styling, campaign concepts, editorial image-making, and creative direction.</p>
+          <p>Available for selected commissions, collaborations, campaigns, and independent publications.</p>
         </div>
       </section>
 
-      <section className="manifesto" id="about" data-reveal>
-        <p className="eyebrow">About Jimmy</p>
-        <h2>Fashion should leave a trace after the body exits the room.</h2>
-        <div className="manifesto-grid">
-          <p>Working between restraint and disruption, Jimmy creates fashion imagery shaped by silhouette, gesture, and atmosphere.</p>
-          <p>Available for campaigns, editorial commissions, styling, runway concepts, and collaborative art direction.</p>
-        </div>
-      </section>
-
-      <section className="contact" id="contact" data-reveal>
-        <p>Have a project in mind?</p>
-        <h2>LET’S CREATE<br />SOMETHING.</h2>
-        <a href="mailto:hello@jimmy.studio">hello@jimmy.studio ↗</a>
-        <footer><span>Jimmy © 2026</span><span>Instagram · Los Angeles</span></footer>
+      <section className="contact" id="contact">
+        <p>( 03 / CONTACT )</p>
+        <a href="mailto:hello@jimmy.studio">LET’S MAKE<br />AN IMAGE <span>↗</span></a>
+        <footer><span>Jimmy © 2026</span><span>Instagram</span><span>Los Angeles</span></footer>
       </section>
     </main>
   );

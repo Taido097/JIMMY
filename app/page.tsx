@@ -161,7 +161,7 @@ function AsciiIntro() {
     let height = window.innerHeight;
     let heroSize = 0;
     let glyphSize = 8.5;
-    let rowGap = 66;
+    let rowGap = 40;
 
     const centers = [0.065, 0.245, 0.44, 0.685, 0.925];
     const letters = ['J', 'I', 'M', 'M', 'Y'];
@@ -177,6 +177,15 @@ function AsciiIntro() {
     const fract = (value: number) => value - Math.floor(value);
     const hash = (seed: number) => fract(Math.sin(seed * 12.9898) * 43758.5453);
     const glyphAt = (seed: number) => matrixChars[Math.abs(Math.floor(seed)) % matrixChars.length];
+    const scrambleToWord = (target: string, progress: number, frame: number) => target
+      .split('')
+      .map((char, index) => {
+        if (char === ' ') return ' ';
+        const revealAt = (index + 1) / target.length;
+        if (progress >= revealAt) return char;
+        return matrixChars[(frame * 5 + index * 11) % matrixChars.length];
+      })
+      .join('');
 
     const buildField = () => {
       const offscreen = document.createElement('canvas');
@@ -187,7 +196,7 @@ function AsciiIntro() {
 
       heroSize = Math.min(width < 800 ? width * 0.27 : width * 0.22, 350);
       glyphSize = width < 800 ? 7.2 : 8.5;
-      rowGap = width < 800 ? 58 : 66;
+      rowGap = width < 800 ? 36 : 40;
       octx.fillStyle = '#fff';
       octx.font = `700 ${heroSize}px Arial`;
       octx.textAlign = 'center';
@@ -228,22 +237,22 @@ function AsciiIntro() {
         }
       }
 
-      const maxWordGlyphs = width < 800 ? 700 : 1120;
+      const maxWordGlyphs = width < 800 ? 860 : 1380;
       const stride = Math.max(1, Math.ceil(candidates.length / maxWordGlyphs));
       wordGlyphs = candidates.filter((_, index) => index % stride === 0).slice(0, maxWordGlyphs);
 
-      const columnGap = width < 800 ? 18 : 22;
+      const columnGap = width < 800 ? 11 : 13;
       const nextRain: RainGlyph[] = [];
       for (let x = columnGap / 2; x < width; x += columnGap) {
         for (let y = -rowGap; y < height + rowGap; y += rowGap) {
           const seed = x * 1.913 + y * 0.817;
           nextRain.push({
-            x: x + (hash(seed + 1) - 0.5) * columnGap * 0.34,
-            startY: y + (hash(seed + 2) - 0.5) * rowGap * 0.7,
+            x: x + (hash(seed + 1) - 0.5) * columnGap * 0.18,
+            startY: y + (hash(seed + 2) - 0.5) * rowGap * 0.45,
             glyphSeed: Math.floor(hash(seed + 3) * 100000),
             speed: 34 + hash(seed + 4) * 68,
-            alpha: 0.09 + hash(seed + 5) * 0.24,
-            trail: hash(seed + 6) > 0.68,
+            alpha: 0.075 + hash(seed + 5) * 0.2,
+            trail: hash(seed + 6) > 0.58,
           });
         }
       }
@@ -272,16 +281,19 @@ function AsciiIntro() {
       ctx.textBaseline = 'middle';
 
       rainGlyphs.forEach((glyph, index) => {
+        const x = glyph.x + Math.sin(time * 0.95 + glyph.startY * 0.018 + glyph.speed * 0.022) * 2.4;
         const y = ((glyph.startY + time * glyph.speed + rowGap) % cycleHeight) - rowGap;
         const character = glyphAt(glyph.glyphSeed + glyphFrame * 7 + index * 3);
         const alpha = glyph.alpha * alphaScale;
 
         ctx.fillStyle = `rgba(245,245,240,${alpha})`;
-        ctx.fillText(character, glyph.x, y);
+        ctx.fillText(character, x, y);
 
         if (glyph.trail) {
           ctx.fillStyle = `rgba(245,245,240,${alpha * 0.22})`;
-          ctx.fillText(glyphAt(glyph.glyphSeed + glyphFrame * 5 + 11), glyph.x, y - rowGap * 0.34);
+          ctx.fillText(glyphAt(glyph.glyphSeed + glyphFrame * 5 + 11), x, y - rowGap * 0.34);
+          ctx.fillStyle = `rgba(245,245,240,${alpha * 0.12})`;
+          ctx.fillText(glyphAt(glyph.glyphSeed + glyphFrame * 3 + 17), x, y - rowGap * 0.68);
         }
       });
     };
@@ -319,14 +331,23 @@ function AsciiIntro() {
       });
     };
 
-    const drawMeta = () => {
+    const drawMeta = (elapsed: number, overallLock: number) => {
+      const frame = Math.floor(elapsed / 70);
+      const topWord = overallLock >= 1
+        ? 'JIMMY®'
+        : scrambleToWord('JIMMY®', overallLock, frame);
+
       ctx.globalAlpha = 0.9;
       ctx.fillStyle = '#f5f5f0';
       ctx.font = '8px "Courier New", monospace';
       ctx.textAlign = 'left';
-      ctx.fillText('JIMMY®', 18, 22);
-      ctx.textAlign = 'right';
-      ctx.fillText('SCROLL TO ENTER', width - 18, 22);
+      ctx.fillText(topWord, 18, 22);
+
+      if (overallLock >= 1) {
+        ctx.textAlign = 'right';
+        ctx.fillText('SCROLL TO ENTER', width - 18, 22);
+      }
+
       ctx.textAlign = 'left';
       ctx.globalAlpha = 1;
     };
@@ -341,7 +362,7 @@ function AsciiIntro() {
       ctx.fillRect(0, 0, width, height);
       drawRain(elapsed, 1 - overallLock * 0.78);
       drawWord(elapsed);
-      drawMeta();
+      drawMeta(elapsed, overallLock);
 
       if (rawElapsed < animationDuration) {
         raf = requestAnimationFrame(draw);

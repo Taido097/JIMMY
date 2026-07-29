@@ -8,6 +8,38 @@ const projects = [
   { number: '03', title: 'NOIR MOTION', year: '2025', image: 'https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=1800&q=85' },
 ];
 
+const asciiFigure = `
+        .........
+      ..:::::::::..
+     .:::::@@::::::.
+     :::::@@@@::::::
+      :::@@@@@@:::
+       ::@@@@@@::
+        :@@@@@@:
+       .:@@@@@@:.
+      .::@@@@@@::.
+     .:::@@@@@@:::.
+    .::::@@@@@@::::.
+   .:::::@@@@@@:::::.
+  .::::::@@@@@@::::::.
+ .:::::::@@@@@@:::::::.
+:::::::::@@@@@@:::::::::
+        @@@@@@@@
+        @@@@@@@@
+        @@@@@@@@
+`;
+
+const asciiTexture = `
+FASHION_001  //////  FORM_002
+................................
+:: :: ::: :::: :: ::: :::: :: ::
+................................
+GARMENT / SILHOUETTE / MOVEMENT
+:: :: ::: :::: :: ::: :::: :: ::
+................................
+JIMMY_2026  //////  ARCHIVE_03
+`;
+
 export default function Home() {
   useEffect(() => {
     if ('scrollRestoration' in window.history) {
@@ -42,11 +74,14 @@ export default function Home() {
       </header>
 
       <section className="hero" id="top">
+        <div className="ascii-layer ascii-left" aria-hidden="true"><pre>{asciiFigure}</pre></div>
+        <div className="ascii-layer ascii-right" aria-hidden="true"><pre>{asciiTexture}</pre></div>
         <p className="hero-label hero-label-left">Fashion Designer</p>
         <p className="hero-label hero-label-right">Los Angeles · 2026</p>
         <h1 aria-label="Jimmy"><span>J</span><span>I</span><span>M</span><span>M</span><span>Y</span></h1>
         <div className="hero-image-wrap">
           <img className="hero-image" src="https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1800&q=90" alt="Fashion garments on a clothing rack" />
+          <div className="dot-screen" aria-hidden="true" />
         </div>
         <p className="hero-statement">Selected collections<br />and garment studies.</p>
       </section>
@@ -58,11 +93,21 @@ export default function Home() {
         <div className="lookbook-grid">
           {projects.map((project, index) => (
             <article className={`lookbook-card card-${index + 1}`} key={project.number} data-reveal>
-              <div className="lookbook-image"><img src={project.image} alt={`${project.title} fashion collection`} /></div>
+              <div className="lookbook-image">
+                <img src={project.image} alt={`${project.title} fashion collection`} />
+                <div className="ascii-hover" aria-hidden="true"><pre>{index === 1 ? asciiTexture : asciiFigure}</pre></div>
+              </div>
               <div className="lookbook-info"><span>{project.number}</span><h2>{project.title}</h2><p>{project.year}</p></div>
             </article>
           ))}
         </div>
+      </section>
+
+      <section className="ascii-break" aria-label="Animated fashion texture">
+        <div className="ascii-track" aria-hidden="true">
+          <pre>{asciiTexture}{asciiTexture}{asciiTexture}</pre>
+        </div>
+        <p>FORM IN MOTION</p>
       </section>
 
       <section className="about" id="about" data-reveal>

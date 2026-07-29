@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useLayoutEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 const projects = [
   { number: '01', title: 'VOID FORM', year: '2026', image: 'https://images.unsplash.com/photo-1539109136881-3be0616acf4b?auto=format&fit=crop&w=1800&q=85' },
@@ -17,43 +17,6 @@ GARMENT / SILHOUETTE / MOVEMENT
 :: :: ::: :::: :: ::: :::: :: ::
 ................................
 JIMMY_2026  //////  ARCHIVE_03
-`;
-
-const diamond = `
-                         ..
-                      ..::::..
-                  ...::::::::::...
-              ....::::::::::::::::....
-          .....::::::::::::::::::::::::.....
-      ......::::::::::::::::::::::::::::::::......
-  .......::::::::::::::::::::::::::::::::::::::::.......
-      ......::::::::::::::::::::::::::::::::......
-          .....::::::::::::::::::::::::.....
-              ....::::::::::::::::....
-                  ...::::::::::...
-                      ..::::..
-                         ..
-`;
-
-const particleField = `
-.. . ....  . . .. ... . .  ....  .  .. . .... . . . ..
- . ... . .. .... . . ... .. .  .. . ... . . .. .... .
-...  . . .. .  .... .. . . ... . .. .  ... . .. . ...
- . .. ... . . .... .  .. ... . .  ... . .. . . .... .
-.. . . ... .. . . ... . ..  .... . . ... .. .  .. ...
-`;
-
-const silhouettes = `
-        ........                 ........                 ........
-      ..::::::::..             ..::::::::..             ..::::::::..
-     .::::@@@@::::.           .::::@@@@::::.           .::::@@@@::::.
-      :::@@@@@@:::             :::@@@@@@:::             :::@@@@@@:::
-       ::@@@@@@::               ::@@@@@@::               ::@@@@@@::
-        :@@@@@@:                 :@@@@@@:                 :@@@@@@:
-       .:@@@@@@:.               .:@@@@@@:.               .:@@@@@@:.
-      .::@@@@@@::.             .::@@@@@@::.             .::@@@@@@::.
-     .:::@@@@@@:::.           .:::@@@@@@:::.           .:::@@@@@@:::.
-    .::::@@@@@@::::.         .::::@@@@@@::::.         .::::@@@@@@::::.
 `;
 
 const scrambleChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#$%&@*?/';
@@ -90,6 +53,155 @@ function ScrambleText({ text, className = '' }: { text: string; className?: stri
   return <span ref={ref} className={className} aria-label={text} onMouseEnter={scramble} onFocus={scramble}>{text}</span>;
 }
 
+function AsciiIntro() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setDone(true);
+      return;
+    }
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let raf = 0;
+    const start = performance.now();
+    const duration = 11500;
+    const chars = '01.:;+=*#%@/\\-|';
+
+    const resize = () => {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = window.innerWidth * dpr;
+      canvas.height = window.innerHeight * dpr;
+      canvas.style.width = `${window.innerWidth}px`;
+      canvas.style.height = `${window.innerHeight}px`;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    };
+
+    const textChar = (x: number, y: number, alpha = 1, size = 8) => {
+      ctx.globalAlpha = alpha;
+      ctx.font = `${size}px "Courier New", monospace`;
+      ctx.fillText(chars[Math.floor(Math.random() * chars.length)], x, y);
+    };
+
+    const ellipseField = (cx: number, cy: number, rx: number, ry: number, density: number, phase: number, alpha = .7) => {
+      for (let y = -ry; y <= ry; y += density) {
+        const width = rx * Math.sqrt(Math.max(0, 1 - (y * y) / (ry * ry)));
+        for (let x = -width; x <= width; x += density) {
+          const wave = Math.sin((x + phase * 120) * .035 + y * .02) * 4;
+          textChar(cx + x, cy + y + wave, alpha * (0.55 + Math.random() * .45), 7);
+        }
+      }
+    };
+
+    const silhouette = (cx: number, cy: number, scale: number, pose: number, alpha = .75) => {
+      const headR = 20 * scale;
+      ellipseField(cx, cy - 150 * scale, headR, headR * 1.15, 5 * scale, pose, alpha);
+      ellipseField(cx, cy - 40 * scale, 56 * scale, 115 * scale, 6 * scale, pose + 1, alpha);
+      ellipseField(cx - 32 * scale, cy + 85 * scale, 20 * scale, 105 * scale, 6 * scale, pose + 2, alpha);
+      ellipseField(cx + 32 * scale, cy + 85 * scale, 20 * scale, 105 * scale, 6 * scale, pose + 3, alpha);
+    };
+
+    const drawWord = (word: string, y: number, progress: number) => {
+      const fontSize = Math.min(window.innerWidth * .19, 260);
+      ctx.save();
+      ctx.font = `700 ${fontSize}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const metrics = ctx.measureText(word);
+      const startX = (window.innerWidth - metrics.width) / 2;
+      ctx.textAlign = 'left';
+      ctx.strokeStyle = 'rgba(18,18,18,.08)';
+      ctx.strokeText(word, startX, y);
+      for (let yy = y - fontSize * .42; yy < y + fontSize * .42; yy += 7) {
+        for (let xx = startX; xx < startX + metrics.width; xx += 7) {
+          const sample = Math.sin(xx * .02 + yy * .017 + progress * 8);
+          if (sample > -.15) textChar(xx, yy, .78, 7);
+        }
+      }
+      ctx.restore();
+    };
+
+    const draw = (now: number) => {
+      const elapsed = now - start;
+      const t = elapsed / 1000;
+      ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+      ctx.fillStyle = '#f5f5f0';
+      ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
+      ctx.fillStyle = '#161616';
+
+      ctx.globalAlpha = 1;
+      ctx.font = '8px "Courier New", monospace';
+      ctx.fillText('JIMMY', 18, 20);
+      ctx.fillText('WORK  ABOUT  CONTACT', window.innerWidth - 150, 20);
+
+      const cx = window.innerWidth / 2;
+      const cy = window.innerHeight / 2;
+
+      if (t < 1.6) {
+        const p = t / 1.6;
+        ellipseField(cx, cy - 190, 80 + p * 85, 18 + p * 12, 6, t, .72);
+        ellipseField(cx, cy, 35 + p * 120, 45 + p * 25, 6, -t, .8);
+        ellipseField(cx, cy + 190, 85 + p * 110, 18 + p * 14, 6, t * 1.5, .72);
+      } else if (t < 3.3) {
+        const p = (t - 1.6) / 1.7;
+        ellipseField(cx, cy, 160 + p * window.innerWidth * .35, 70 + p * 105, 6, t, .55 + p * .2);
+      } else if (t < 4.4) {
+        const p = (t - 3.3) / 1.1;
+        for (let i = 0; i < 1800; i++) {
+          const angle = Math.random() * Math.PI * 2;
+          const radius = Math.random() * (80 + p * window.innerWidth * .55);
+          textChar(cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius * .38, (1 - p) * .7, 7);
+        }
+      } else if (t < 5.6) {
+        drawWord('jimmy', cy, (t - 4.4) / 1.2);
+      } else if (t < 6.8) {
+        const p = (t - 5.6) / 1.2;
+        const cols = 5;
+        for (let c = 0; c < cols; c++) {
+          const x = (c + .5) * window.innerWidth / cols;
+          const h = window.innerHeight * (.25 + .55 * Math.abs(Math.sin(c + p * 2)));
+          for (let y = cy - h / 2; y < cy + h / 2; y += 7) textChar(x, y, .72, 7);
+        }
+      } else if (t < 9.4) {
+        const p = (t - 6.8) / 2.6;
+        silhouette(window.innerWidth * .22, cy + 35, .82, t, .55 + p * .2);
+        silhouette(window.innerWidth * .50, cy + 25, 1.0, t + 1, .68 + p * .18);
+        silhouette(window.innerWidth * .78, cy + 40, .78, t + 2, .52 + p * .18);
+        for (let i = 0; i < 900; i++) {
+          const y = window.innerHeight * (.65 + Math.random() * .35);
+          textChar(Math.random() * window.innerWidth, y, .25 + Math.random() * .28, 7);
+        }
+      } else if (t < 10.7) {
+        const p = (t - 9.4) / 1.3;
+        ellipseField(cx - window.innerWidth * .18, cy, 120 + p * window.innerWidth * .55, 95 + p * 170, 6, t, .62);
+        ellipseField(cx + window.innerWidth * .24, cy + 20, 90 + p * window.innerWidth * .45, 75 + p * 150, 6, -t, .5);
+      } else {
+        const p = Math.min(1, (t - 10.7) / .8);
+        ctx.globalAlpha = 1 - p;
+      }
+
+      if (elapsed < duration) raf = requestAnimationFrame(draw);
+      else setDone(true);
+    };
+
+    resize();
+    window.addEventListener('resize', resize);
+    raf = requestAnimationFrame(draw);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('resize', resize);
+    };
+  }, []);
+
+  if (done) return null;
+  return <div className="ascii-intro" aria-hidden="true"><canvas ref={canvasRef} /></div>;
+}
+
 export default function Home() {
   useLayoutEffect(() => {
     if ('scrollRestoration' in window.history) window.history.scrollRestoration = 'manual';
@@ -99,12 +211,10 @@ export default function Home() {
     const frame = window.requestAnimationFrame(resetToTop);
     const timers = [0, 80, 250, 700].map((delay) => window.setTimeout(resetToTop, delay));
     window.addEventListener('pageshow', resetToTop);
-    window.addEventListener('load', resetToTop);
     return () => {
       window.cancelAnimationFrame(frame);
       timers.forEach((timer) => window.clearTimeout(timer));
       window.removeEventListener('pageshow', resetToTop);
-      window.removeEventListener('load', resetToTop);
     };
   }, []);
 
@@ -121,47 +231,14 @@ export default function Home() {
   return (
     <main>
       <style jsx global>{`
-        .loader{display:block;overflow:hidden;background:#f5f5f0;color:#111;animation:introExit .9s cubic-bezier(.76,0,.24,1) 8.7s forwards}
-        .intro-scene{position:absolute;inset:0;display:grid;place-items:center;opacity:0;pointer-events:none}
-        .intro-scene pre{margin:0;font-family:"Courier New",monospace;white-space:pre;text-align:center}
-        .intro-meta{position:absolute;top:16px;left:18px;right:18px;display:flex;justify-content:space-between;font:8px/1 "Courier New",monospace;letter-spacing:.12em;text-transform:uppercase;z-index:5}
-        .scene-diamond{animation:sceneDiamond 2.25s steps(14,end) .1s both}
-        .scene-diamond pre{font-size:clamp(5px,.55vw,9px);line-height:.72;letter-spacing:-.08em;animation:diamondGrow 2.15s cubic-bezier(.16,1,.3,1) both}
-        .scene-noise{animation:sceneNoise 1.45s steps(9,end) 2.05s both}
-        .scene-noise pre{position:absolute;inset:-20%;font-size:8px;line-height:1.2;letter-spacing:.25em;white-space:pre-wrap;animation:noiseRise 1.5s linear both}
-        .scene-word{animation:sceneWord 2.05s steps(12,end) 3.15s both;overflow:hidden}
-        .scene-word strong{font-family:Arial,Helvetica,sans-serif;font-size:clamp(110px,28vw,430px);line-height:.68;letter-spacing:-.12em;text-transform:lowercase;color:transparent;-webkit-text-stroke:1px #111;background-image:repeating-linear-gradient(to bottom,#111 0 1px,transparent 1px 4px);-webkit-background-clip:text;background-clip:text;animation:wordAssemble 1.9s cubic-bezier(.16,1,.3,1) both}
-        .scene-columns{animation:sceneColumns 1.75s steps(10,end) 5.0s both;overflow:hidden}
-        .scene-columns pre{font-size:clamp(5px,.48vw,8px);line-height:.76;letter-spacing:-.08em;transform:scaleY(1.25);animation:columnsShift 1.7s ease-in-out both}
-        .scene-silhouettes{animation:sceneSilhouettes 2.05s steps(12,end) 6.45s both;overflow:hidden}
-        .scene-silhouettes pre{font-size:clamp(5px,.5vw,8px);line-height:.76;letter-spacing:-.08em;animation:silhouetteResolve 1.8s cubic-bezier(.16,1,.3,1) both}
-        .intro-caption{position:absolute;bottom:18px;left:18px;right:18px;display:flex;justify-content:space-between;font:8px/1 "Courier New",monospace;letter-spacing:.14em;text-transform:uppercase;z-index:5}
+        .ascii-intro{position:fixed;inset:0;z-index:1000;background:#f5f5f0;overflow:hidden}
+        .ascii-intro canvas{display:block;width:100%;height:100%}
         .scramble-text{display:inline-block;min-width:max-content;font-variant-numeric:tabular-nums}
         .lookbook-info h2 .scramble-text{display:block}
-        @keyframes diamondGrow{0%{opacity:0;transform:scale(.08) rotate(45deg);filter:blur(3px)}35%{opacity:1}70%{transform:scale(1.4) rotate(0)}100%{transform:scale(2.1);opacity:.95}}
-        @keyframes sceneDiamond{0%,88%{opacity:1}100%{opacity:0}}
-        @keyframes noiseRise{from{transform:translateY(25%);opacity:0}25%{opacity:.75}to{transform:translateY(-20%);opacity:0}}
-        @keyframes sceneNoise{0%,12%{opacity:0}25%,75%{opacity:1}100%{opacity:0}}
-        @keyframes wordAssemble{0%{opacity:0;transform:scaleX(1.65) skewX(-12deg);filter:blur(7px)}45%{opacity:1;filter:blur(0)}100%{transform:none}}
-        @keyframes sceneWord{0%,8%{opacity:0}18%,82%{opacity:1}100%{opacity:0}}
-        @keyframes columnsShift{0%{opacity:0;transform:scaleY(.15) translateY(30%)}35%{opacity:1}100%{transform:scaleY(1.25) translateY(-4%)}}
-        @keyframes sceneColumns{0%,8%{opacity:0}20%,82%{opacity:1}100%{opacity:0}}
-        @keyframes silhouetteResolve{0%{opacity:0;transform:translateY(18%) scaleX(1.4);filter:blur(5px)}40%{opacity:1;filter:blur(0)}100%{transform:none}}
-        @keyframes sceneSilhouettes{0%,8%{opacity:0}20%,88%{opacity:1}100%{opacity:0}}
-        @keyframes introExit{0%{clip-path:inset(0)}100%{clip-path:inset(0 0 100% 0);visibility:hidden}}
-        @media(max-width:800px){.scene-word strong{font-size:31vw}.scene-columns pre,.scene-silhouettes pre{font-size:4px}.intro-meta,.intro-caption{font-size:6px}}
-        @media(prefers-reduced-motion:reduce){.loader{display:none}}
+        @media(prefers-reduced-motion:reduce){.ascii-intro{display:none}}
       `}</style>
 
-      <div className="loader" aria-hidden="true">
-        <div className="intro-meta"><span>JIMMY / 2026</span><span>FASHION DESIGN</span><span>LOS ANGELES</span></div>
-        <div className="intro-scene scene-diamond"><pre>{diamond}</pre></div>
-        <div className="intro-scene scene-noise"><pre>{particleField.repeat(9)}</pre></div>
-        <div className="intro-scene scene-word"><strong>jimmy</strong></div>
-        <div className="intro-scene scene-columns"><pre>{asciiTexture.repeat(8)}</pre></div>
-        <div className="intro-scene scene-silhouettes"><pre>{silhouettes}</pre></div>
-        <div className="intro-caption"><span>FORM / GARMENT / MOTION</span><span>ARCHIVE LOADING</span></div>
-      </div>
+      <AsciiIntro />
 
       <header className="nav">
         <a className="brand" href="#top">JIMMY®</a>
@@ -212,7 +289,11 @@ export default function Home() {
       </section>
 
       <section className="contact" id="contact">
-        <div className="contact-copy" data-reveal><span>Get in touch</span><h2>START A<br />PROJECT.</h2><p>For custom pieces, collections, collaborations, and fashion inquiries.</p></div>
+        <div className="contact-copy" data-reveal>
+          <span>Get in touch</span>
+          <h2>START A<br />PROJECT.</h2>
+          <p>For custom pieces, collections, collaborations, and fashion inquiries.</p>
+        </div>
         <form className="contact-form" action="mailto:hello@jimmy.studio" method="post" encType="text/plain" data-reveal>
           <label>Name<input type="text" name="name" required /></label>
           <label>Email<input type="email" name="email" required /></label>

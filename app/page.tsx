@@ -125,8 +125,11 @@ function AsciiIntro() {
     let ambient: AmbientParticle[] = [];
     let width = window.innerWidth;
     let height = window.innerHeight;
+    let heroSize = 0;
+    const centers = [0.065, 0.245, 0.44, 0.685, 0.925];
+    const letters = ['J', 'I', 'M', 'M', 'Y'];
     const startedAt = performance.now();
-    const animationDuration = 7200;
+    const animationDuration = 7600;
     const ease = (value: number) => 1 - Math.pow(1 - Math.max(0, Math.min(1, value)), 3);
 
     const buildParticles = () => {
@@ -135,9 +138,7 @@ function AsciiIntro() {
       offscreen.height = height;
       const octx = offscreen.getContext('2d', { willReadFrequently: true });
       if (!octx) return;
-      const heroSize = Math.min(width < 800 ? width * 0.27 : width * 0.22, 350);
-      const centers = [0.065, 0.245, 0.44, 0.685, 0.925];
-      const letters = ['J', 'I', 'M', 'M', 'Y'];
+      heroSize = Math.min(width < 800 ? width * 0.27 : width * 0.22, 350);
       octx.fillStyle = '#fff';
       octx.font = `700 ${heroSize}px Arial`;
       octx.textAlign = 'center';
@@ -153,7 +154,10 @@ function AsciiIntro() {
             candidates.push({
               sx: width / 2 + Math.cos(angle) * width * (0.5 + Math.random() * 0.45),
               sy: height / 2 + Math.sin(angle) * height * (0.4 + Math.random() * 0.5),
-              tx: x, ty: y, phase: Math.random() * Math.PI * 2, size: width < 800 ? 1.35 : 1.6,
+              tx: x,
+              ty: y,
+              phase: Math.random() * Math.PI * 2,
+              size: width < 800 ? 1.35 : 1.6,
             });
           }
         }
@@ -162,8 +166,10 @@ function AsciiIntro() {
       const stride = Math.max(1, Math.ceil(candidates.length / maxParticles));
       particles = candidates.filter((_, index) => index % stride === 0).slice(0, maxParticles);
       ambient = Array.from({ length: width < 800 ? 420 : 780 }, () => ({
-        x: Math.random() * width, y: Math.random() * height,
-        phase: Math.random() * Math.PI * 2, size: 0.8 + Math.random() * 1.1,
+        x: Math.random() * width,
+        y: Math.random() * height,
+        phase: Math.random() * Math.PI * 2,
+        size: 0.8 + Math.random() * 1.1,
       }));
     };
 
@@ -178,28 +184,68 @@ function AsciiIntro() {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       buildParticles();
     };
-    const drawDots = (progress: number, alpha: number) => {
+
+    const drawDots = (progress: number, alpha: number, jitterScale = 1) => {
       ctx.fillStyle = `rgba(245,245,240,${alpha})`;
       ctx.beginPath();
       particles.forEach((particle, index) => {
         const movement = ease(progress);
         const remaining = 1 - movement;
-        const x = particle.sx + (particle.tx - particle.sx) * movement + Math.sin(particle.phase + index * 0.015 + progress * 5) * 38 * remaining;
-        const y = particle.sy + (particle.ty - particle.sy) * movement + Math.cos(particle.phase + index * 0.011 + progress * 4) * 22 * remaining;
+        const x = particle.sx + (particle.tx - particle.sx) * movement + Math.sin(particle.phase + index * 0.015 + progress * 5) * 38 * remaining * jitterScale;
+        const y = particle.sy + (particle.ty - particle.sy) * movement + Math.cos(particle.phase + index * 0.011 + progress * 4) * 22 * remaining * jitterScale;
         ctx.rect(x, y, particle.size, particle.size);
       });
       ctx.fill();
     };
+
     const drawAmbient = (time: number, alpha: number) => {
       ctx.fillStyle = `rgba(245,245,240,${alpha})`;
       ctx.beginPath();
       ambient.forEach((particle) => ctx.rect(
         particle.x + Math.sin(time * 0.7 + particle.phase) * 10,
         particle.y + Math.cos(time * 0.55 + particle.phase) * 7,
-        particle.size, particle.size,
+        particle.size,
+        particle.size,
       ));
       ctx.fill();
     };
+
+    const drawScrambleWord = (progress: number, elapsed: number) => {
+      const resolved = Math.min(5, Math.floor(progress * 5.8));
+      const frame = Math.floor(elapsed / 42);
+      ctx.save();
+      ctx.font = `700 ${heroSize}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      letters.forEach((letter, index) => {
+        const isResolved = index < resolved;
+        const poolIndex = (frame * 7 + index * 13) % scrambleChars.length;
+        const glyph = isResolved ? letter : scrambleChars[poolIndex];
+        const remaining = 1 - progress;
+        const jitterX = isResolved ? 0 : Math.sin(frame * 0.8 + index) * 13 * remaining;
+        const jitterY = isResolved ? 0 : Math.cos(frame * 0.65 + index * 1.7) * 8 * remaining;
+        ctx.globalAlpha = isResolved ? 0.28 + progress * 0.2 : 0.15 + progress * 0.2;
+        ctx.fillStyle = '#f5f5f0';
+        ctx.fillText(glyph, width * centers[index] + jitterX, height * 0.5 + jitterY);
+      });
+      ctx.restore();
+      ctx.globalAlpha = 1;
+    };
+
+    const drawFinalWord = () => {
+      particles.forEach((particle) => {
+        ctx.fillStyle = 'rgba(245,245,240,0.98)';
+        ctx.fillRect(particle.tx, particle.ty, particle.size, particle.size);
+      });
+      ctx.save();
+      ctx.font = `700 ${heroSize}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = 'rgba(245,245,240,0.16)';
+      letters.forEach((letter, index) => ctx.fillText(letter, width * centers[index], height * 0.5));
+      ctx.restore();
+    };
+
     const drawMeta = () => {
       ctx.globalAlpha = 0.9;
       ctx.fillStyle = '#f5f5f0';
@@ -211,25 +257,29 @@ function AsciiIntro() {
       ctx.textAlign = 'left';
       ctx.globalAlpha = 1;
     };
+
     const draw = (now: number) => {
       const elapsed = now - startedAt;
       const time = elapsed / 1000;
       ctx.fillStyle = '#000';
       ctx.fillRect(0, 0, width, height);
+
       if (elapsed < 1500) {
         const progress = elapsed / 1500;
         drawAmbient(time, 0.25);
         drawDots(progress * 0.2, 0.38 + progress * 0.25);
-      } else if (elapsed < 5100) {
-        const progress = (elapsed - 1500) / 3600;
+      } else if (elapsed < 4450) {
+        const progress = (elapsed - 1500) / 2950;
         drawAmbient(time, 0.22 * (1 - progress));
-        drawDots(0.2 + progress * 0.8, 0.68 + progress * 0.3);
+        drawDots(0.2 + progress * 0.68, 0.68 + progress * 0.25);
+      } else if (elapsed < 6350) {
+        const progress = (elapsed - 4450) / 1900;
+        drawDots(0.88 + progress * 0.12, 0.9 + progress * 0.08, 0.55);
+        drawScrambleWord(progress, elapsed);
       } else {
-        particles.forEach((particle) => {
-          ctx.fillStyle = 'rgba(245,245,240,0.98)';
-          ctx.fillRect(particle.tx, particle.ty, particle.size, particle.size);
-        });
+        drawFinalWord();
       }
+
       drawMeta();
       if (elapsed < animationDuration) raf = requestAnimationFrame(draw);
       else setReady(true);
@@ -245,10 +295,16 @@ function AsciiIntro() {
   }, []);
 
   if (dismissed) return null;
+  const enter = () => {
+    if (!ready || leaving) return;
+    setLeaving(true);
+    window.setTimeout(() => setDismissed(true), 850);
+  };
+
   return (
     <div className={`ascii-intro-overlay${ready ? ' is-ready' : ''}${leaving ? ' is-leaving' : ''}`} aria-label="Jimmy introduction">
       <canvas ref={canvasRef} aria-hidden="true" />
-      <button className="intro-scroll-cue" type="button" onClick={() => ready && setLeaving(true)} aria-label="Enter website">SCROLL<br />↓</button>
+      <button className="intro-scroll-cue" type="button" onClick={enter} aria-label="Enter website">SCROLL<br />↓</button>
     </div>
   );
 }

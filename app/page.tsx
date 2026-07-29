@@ -13,7 +13,7 @@ export default function Home() {
     const elements = document.querySelectorAll('[data-reveal]');
     const observer = new IntersectionObserver(
       (entries) => entries.forEach((entry) => entry.isIntersecting && entry.target.classList.add('is-visible')),
-      { threshold: 0.14 }
+      { threshold: 0.04, rootMargin: '0px 0px 8% 0px' }
     );
     elements.forEach((element) => observer.observe(element));
     return () => observer.disconnect();
@@ -25,51 +25,53 @@ export default function Home() {
 
       <header className="nav">
         <a className="brand" href="#top">JIMMY®</a>
-        <p>Fashion Designer<br />Los Angeles</p>
         <nav><a href="#work">Work</a><a href="#about">About</a><a href="#contact">Contact</a></nav>
       </header>
 
       <section className="hero" id="top">
-        <div className="hero-grid" aria-hidden="true">{Array.from({ length: 24 }).map((_, i) => <i key={i} />)}</div>
         <p className="hero-label hero-label-left">Fashion Designer</p>
-        <p className="hero-label hero-label-right">Scroll ↓</p>
+        <p className="hero-label hero-label-right">Los Angeles · 2026</p>
         <h1 aria-label="Jimmy"><span>J</span><span>I</span><span>M</span><span>M</span><span>Y</span></h1>
         <div className="hero-image-wrap">
-          <img className="hero-image" src="https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1800&q=90" alt="Fashion collection by Jimmy" />
-          <div className="scanlines" />
+          <img className="hero-image" src="https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1800&q=90" alt="Fashion garments on a clothing rack" />
         </div>
-        <p className="hero-statement">Form. Fabric. Movement.</p>
+        <p className="hero-statement">Selected collections<br />and garment studies.</p>
       </section>
 
-      <section className="ticker" aria-label="Fashion design">
-        <div>COLLECTIONS — GARMENTS — SILHOUETTES — COLLECTIONS — GARMENTS — SILHOUETTES —</div>
-      </section>
+      <section className="ticker"><div>FASHION DESIGN — COLLECTIONS — GARMENTS — FORM — TEXTURE — FASHION DESIGN — COLLECTIONS —</div></section>
 
-      <section className="index" id="work">
-        <div className="index-head"><span>Selected Collections</span><span>2025—2026</span></div>
-        {projects.map((project) => (
-          <article className="project" key={project.number} data-reveal>
-            <div className="project-line">
-              <span>{project.number}</span><h2>{project.title}</h2><p>{project.year}</p><b>↗</b>
-            </div>
-            <div className="project-media"><img src={project.image} alt={`${project.title} collection`} /></div>
-          </article>
-        ))}
-      </section>
-
-      <section className="type-play" aria-label="Jimmy fashion designer">
-        <div className="type-orbit">JIMMY JIMMY JIMMY JIMMY JIMMY JIMMY</div>
-        <p>FORM<br />IN<br />MOTION</p>
+      <section className="lookbook" id="work">
+        <div className="section-head"><span>Selected Collections</span><span>2025—2026</span></div>
+        <div className="lookbook-grid">
+          {projects.map((project, index) => (
+            <article className={`lookbook-card card-${index + 1}`} key={project.number} data-reveal>
+              <div className="lookbook-image"><img src={project.image} alt={`${project.title} fashion collection`} /></div>
+              <div className="lookbook-info"><span>{project.number}</span><h2>{project.title}</h2><p>{project.year}</p></div>
+            </article>
+          ))}
+        </div>
       </section>
 
       <section className="about" id="about" data-reveal>
-        <div className="about-meta"><span>About</span><span>Los Angeles, CA</span></div>
-        <h2>Jimmy is a fashion designer focused on silhouette, proportion, and movement.</h2>
+        <span>About</span>
+        <h2>Jimmy is a Los Angeles fashion designer focused on silhouette, structure, and movement.</h2>
       </section>
 
       <section className="contact" id="contact">
-        <p>Contact</p>
-        <a href="mailto:hello@jimmy.studio">GET IN<br />TOUCH <span>↗</span></a>
+        <div className="contact-copy" data-reveal>
+          <span>Get in touch</span>
+          <h2>START A<br />PROJECT.</h2>
+          <p>For custom pieces, collections, collaborations, and fashion inquiries.</p>
+        </div>
+
+        <form className="contact-form" action="mailto:hello@jimmy.studio" method="post" encType="text/plain" data-reveal>
+          <label>Name<input type="text" name="name" required /></label>
+          <label>Email<input type="email" name="email" required /></label>
+          <label>Inquiry type<select name="inquiry" defaultValue="Custom piece"><option>Custom piece</option><option>Collection</option><option>Collaboration</option><option>Press</option><option>Other</option></select></label>
+          <label>Message<textarea name="message" rows={5} required /></label>
+          <button type="submit">Send inquiry ↗</button>
+        </form>
+
         <footer><span>Jimmy © 2026</span><span>Instagram</span><span>Los Angeles</span></footer>
       </section>
     </main>

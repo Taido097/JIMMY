@@ -24,13 +24,11 @@ const scrambleChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#$%&@*?/';
 function ScrambleText({ text, className = '' }: { text: string; className?: string }) {
   const ref = useRef<HTMLSpanElement>(null);
   const intervalRef = useRef<number | null>(null);
-
   const stop = () => {
     if (intervalRef.current !== null) window.clearInterval(intervalRef.current);
     intervalRef.current = null;
     if (ref.current) ref.current.textContent = text;
   };
-
   const scramble = () => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     stop();
@@ -48,7 +46,6 @@ function ScrambleText({ text, className = '' }: { text: string; className?: stri
       if (frame > totalFrames) stop();
     }, 28);
   };
-
   useEffect(() => stop, []);
   return <span ref={ref} className={className} aria-label={text} onMouseEnter={scramble} onFocus={scramble}>{text}</span>;
 }
@@ -59,39 +56,65 @@ type AmbientParticle = { x: number; y: number; phase: number; size: number };
 function AsciiIntro() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [ready, setReady] = useState(false);
+  const [leaving, setLeaving] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+  const touchStartY = useRef(0);
 
   useEffect(() => {
-    if (ready) return;
-
+    if (dismissed) return;
     const previousBodyOverflow = document.body.style.overflow;
     const previousHtmlOverflow = document.documentElement.style.overflow;
     document.body.style.overflow = 'hidden';
     document.documentElement.style.overflow = 'hidden';
 
-    const prevent = (event: Event) => event.preventDefault();
-    const preventKeys = (event: KeyboardEvent) => {
-      if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(event.key)) event.preventDefault();
+    const dismiss = () => {
+      if (!ready || leaving) return;
+      setLeaving(true);
+      window.setTimeout(() => setDismissed(true), 850);
+    };
+    const onWheel = (event: WheelEvent) => {
+      event.preventDefault();
+      if (event.deltaY > 2) dismiss();
+    };
+    const onTouchStart = (event: TouchEvent) => {
+      touchStartY.current = event.touches[0]?.clientY ?? 0;
+    };
+    const onTouchMove = (event: TouchEvent) => event.preventDefault();
+    const onTouchEnd = (event: TouchEvent) => {
+      const endY = event.changedTouches[0]?.clientY ?? touchStartY.current;
+      if (touchStartY.current - endY > 24) dismiss();
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (['ArrowDown', 'PageDown', 'End', ' '].includes(event.key)) {
+        event.preventDefault();
+        dismiss();
+      } else if (['ArrowUp', 'PageUp', 'Home'].includes(event.key)) {
+        event.preventDefault();
+      }
     };
 
-    window.addEventListener('wheel', prevent, { passive: false });
-    window.addEventListener('touchmove', prevent, { passive: false });
-    window.addEventListener('keydown', preventKeys, { passive: false });
+    window.addEventListener('wheel', onWheel, { passive: false });
+    window.addEventListener('touchstart', onTouchStart, { passive: true });
+    window.addEventListener('touchmove', onTouchMove, { passive: false });
+    window.addEventListener('touchend', onTouchEnd, { passive: true });
+    window.addEventListener('keydown', onKeyDown, { passive: false });
 
     return () => {
       document.body.style.overflow = previousBodyOverflow;
       document.documentElement.style.overflow = previousHtmlOverflow;
-      window.removeEventListener('wheel', prevent);
-      window.removeEventListener('touchmove', prevent);
-      window.removeEventListener('keydown', preventKeys);
+      window.removeEventListener('wheel', onWheel);
+      window.removeEventListener('touchstart', onTouchStart);
+      window.removeEventListener('touchmove', onTouchMove);
+      window.removeEventListener('touchend', onTouchEnd);
+      window.removeEventListener('keydown', onKeyDown);
     };
-  }, [ready]);
+  }, [ready, leaving, dismissed]);
 
   useEffect(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       setReady(true);
       return;
     }
-
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d', { alpha: false });
@@ -110,47 +133,37 @@ function AsciiIntro() {
       const offscreen = document.createElement('canvas');
       offscreen.width = width;
       offscreen.height = height;
-      const offscreenContext = offscreen.getContext('2d', { willReadFrequently: true });
-      if (!offscreenContext) return;
-
+      const octx = offscreen.getContext('2d', { willReadFrequently: true });
+      if (!octx) return;
       const heroSize = Math.min(width < 800 ? width * 0.27 : width * 0.22, 350);
-      const letterCenters = [0.065, 0.245, 0.44, 0.685, 0.925];
+      const centers = [0.065, 0.245, 0.44, 0.685, 0.925];
       const letters = ['J', 'I', 'M', 'M', 'Y'];
-
-      offscreenContext.fillStyle = '#fff';
-      offscreenContext.font = `700 ${heroSize}px Arial`;
-      offscreenContext.textAlign = 'center';
-      offscreenContext.textBaseline = 'middle';
-      letters.forEach((letter, index) => offscreenContext.fillText(letter, width * letterCenters[index], height * 0.5));
-
-      const imageData = offscreenContext.getImageData(0, 0, width, height).data;
+      octx.fillStyle = '#fff';
+      octx.font = `700 ${heroSize}px Arial`;
+      octx.textAlign = 'center';
+      octx.textBaseline = 'middle';
+      letters.forEach((letter, index) => octx.fillText(letter, width * centers[index], height * 0.5));
+      const data = octx.getImageData(0, 0, width, height).data;
       const gap = width < 800 ? 6 : 7;
       const candidates: Particle[] = [];
-
       for (let y = 0; y < height; y += gap) {
         for (let x = 0; x < width; x += gap) {
-          if (imageData[(y * width + x) * 4 + 3] > 120) {
+          if (data[(y * width + x) * 4 + 3] > 120) {
             const angle = Math.random() * Math.PI * 2;
             candidates.push({
               sx: width / 2 + Math.cos(angle) * width * (0.5 + Math.random() * 0.45),
               sy: height / 2 + Math.sin(angle) * height * (0.4 + Math.random() * 0.5),
-              tx: x,
-              ty: y,
-              phase: Math.random() * Math.PI * 2,
-              size: width < 800 ? 1.35 : 1.6,
+              tx: x, ty: y, phase: Math.random() * Math.PI * 2, size: width < 800 ? 1.35 : 1.6,
             });
           }
         }
       }
-
       const maxParticles = width < 800 ? 3400 : 5000;
       const stride = Math.max(1, Math.ceil(candidates.length / maxParticles));
       particles = candidates.filter((_, index) => index % stride === 0).slice(0, maxParticles);
       ambient = Array.from({ length: width < 800 ? 420 : 780 }, () => ({
-        x: Math.random() * width,
-        y: Math.random() * height,
-        phase: Math.random() * Math.PI * 2,
-        size: 0.8 + Math.random() * 1.1,
+        x: Math.random() * width, y: Math.random() * height,
+        phase: Math.random() * Math.PI * 2, size: 0.8 + Math.random() * 1.1,
       }));
     };
 
@@ -165,7 +178,6 @@ function AsciiIntro() {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       buildParticles();
     };
-
     const drawDots = (progress: number, alpha: number) => {
       ctx.fillStyle = `rgba(245,245,240,${alpha})`;
       ctx.beginPath();
@@ -178,21 +190,16 @@ function AsciiIntro() {
       });
       ctx.fill();
     };
-
     const drawAmbient = (time: number, alpha: number) => {
       ctx.fillStyle = `rgba(245,245,240,${alpha})`;
       ctx.beginPath();
-      ambient.forEach((particle) => {
-        ctx.rect(
-          particle.x + Math.sin(time * 0.7 + particle.phase) * 10,
-          particle.y + Math.cos(time * 0.55 + particle.phase) * 7,
-          particle.size,
-          particle.size,
-        );
-      });
+      ambient.forEach((particle) => ctx.rect(
+        particle.x + Math.sin(time * 0.7 + particle.phase) * 10,
+        particle.y + Math.cos(time * 0.55 + particle.phase) * 7,
+        particle.size, particle.size,
+      ));
       ctx.fill();
     };
-
     const drawMeta = () => {
       ctx.globalAlpha = 0.9;
       ctx.fillStyle = '#f5f5f0';
@@ -204,14 +211,11 @@ function AsciiIntro() {
       ctx.textAlign = 'left';
       ctx.globalAlpha = 1;
     };
-
     const draw = (now: number) => {
       const elapsed = now - startedAt;
       const time = elapsed / 1000;
-
       ctx.fillStyle = '#000';
       ctx.fillRect(0, 0, width, height);
-
       if (elapsed < 1500) {
         const progress = elapsed / 1500;
         drawAmbient(time, 0.25);
@@ -226,31 +230,26 @@ function AsciiIntro() {
           ctx.fillRect(particle.tx, particle.ty, particle.size, particle.size);
         });
       }
-
       drawMeta();
-
-      if (elapsed < animationDuration) {
-        raf = requestAnimationFrame(draw);
-      } else {
-        setReady(true);
-      }
+      if (elapsed < animationDuration) raf = requestAnimationFrame(draw);
+      else setReady(true);
     };
 
     resize();
     window.addEventListener('resize', resize);
     raf = requestAnimationFrame(draw);
-
     return () => {
       cancelAnimationFrame(raf);
       window.removeEventListener('resize', resize);
     };
   }, []);
 
+  if (dismissed) return null;
   return (
-    <section className={`ascii-intro-section${ready ? ' is-ready' : ''}`} aria-label="Jimmy introduction">
+    <div className={`ascii-intro-overlay${ready ? ' is-ready' : ''}${leaving ? ' is-leaving' : ''}`} aria-label="Jimmy introduction">
       <canvas ref={canvasRef} aria-hidden="true" />
-      <div className="intro-scroll-cue" aria-hidden="true">SCROLL<br />↓</div>
-    </section>
+      <button className="intro-scroll-cue" type="button" onClick={() => ready && setLeaving(true)} aria-label="Enter website">SCROLL<br />↓</button>
+    </div>
   );
 }
 
@@ -283,14 +282,15 @@ export default function Home() {
   return (
     <main>
       <style jsx global>{`
-        .ascii-intro-section{position:relative;height:100svh;min-height:620px;background:#000;overflow:hidden;z-index:40;touch-action:none}
-        .ascii-intro-section.is-ready{touch-action:auto}
-        .ascii-intro-section canvas{display:block;width:100%;height:100%}
-        .intro-scroll-cue{position:absolute;left:50%;bottom:22px;transform:translateX(-50%) translateY(10px);color:#f5f5f0;font:8px/1.35 "Courier New",monospace;letter-spacing:.16em;text-align:center;opacity:0;transition:opacity .45s ease,transform .45s ease}
-        .ascii-intro-section.is-ready .intro-scroll-cue{opacity:.78;transform:translateX(-50%) translateY(0)}
+        .ascii-intro-overlay{position:fixed;inset:0;z-index:1000;background:#000;overflow:hidden;transform:translateY(0);will-change:transform;touch-action:none;transition:transform .85s cubic-bezier(.76,0,.24,1)}
+        .ascii-intro-overlay.is-leaving{transform:translateY(-100%);pointer-events:none}
+        .ascii-intro-overlay canvas{display:block;width:100%;height:100%}
+        .intro-scroll-cue{position:absolute;left:50%;bottom:22px;transform:translateX(-50%) translateY(10px);border:0;background:transparent;color:#f5f5f0;font:8px/1.35 "Courier New",monospace;letter-spacing:.16em;text-align:center;opacity:0;transition:opacity .35s ease,transform .35s ease;cursor:pointer}
+        .ascii-intro-overlay.is-ready .intro-scroll-cue{opacity:.78;transform:translateX(-50%) translateY(0)}
+        .ascii-intro-overlay.is-leaving .intro-scroll-cue{opacity:0}
         .scramble-text{display:inline-block;min-width:max-content;font-variant-numeric:tabular-nums}
         .lookbook-info h2 .scramble-text{display:block}
-        @media(prefers-reduced-motion:reduce){.ascii-intro-section{height:100svh;touch-action:auto}.intro-scroll-cue{opacity:.78;transform:translateX(-50%)}}
+        @media(prefers-reduced-motion:reduce){.ascii-intro-overlay{transition-duration:.35s}.intro-scroll-cue{opacity:.78;transform:translateX(-50%)}}
       `}</style>
 
       <AsciiIntro />

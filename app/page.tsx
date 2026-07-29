@@ -77,7 +77,8 @@ type RainGlyph = {
   glyphSeed: number;
   speed: number;
   alpha: number;
-  trail: boolean;
+  trail: number;
+  drift: number;
 };
 
 function AsciiIntro() {
@@ -105,18 +106,14 @@ function AsciiIntro() {
       event.preventDefault();
       if (event.deltaY > 2) dismiss();
     };
-
     const onTouchStart = (event: TouchEvent) => {
       touchStartY.current = event.touches[0]?.clientY ?? 0;
     };
-
     const onTouchMove = (event: TouchEvent) => event.preventDefault();
-
     const onTouchEnd = (event: TouchEvent) => {
       const endY = event.changedTouches[0]?.clientY ?? touchStartY.current;
       if (touchStartY.current - endY > 24) dismiss();
     };
-
     const onKeyDown = (event: KeyboardEvent) => {
       if (['ArrowDown', 'PageDown', 'End', ' '].includes(event.key)) {
         event.preventDefault();
@@ -160,14 +157,14 @@ function AsciiIntro() {
     let width = window.innerWidth;
     let height = window.innerHeight;
     let heroSize = 0;
-    let glyphSize = 8.5;
-    let rowGap = 40;
+    let glyphSize = 7.6;
+    let rowGap = 30;
 
     const centers = [0.065, 0.245, 0.44, 0.685, 0.925];
     const letters = ['J', 'I', 'M', 'M', 'Y'];
     const startedAt = performance.now();
-    const rainLeadIn = 780;
-    const letterDuration = 650;
+    const rainLeadIn = 760;
+    const letterDuration = 660;
     const animationDuration = rainLeadIn + letterDuration * letters.length;
     const clamp = (value: number) => Math.max(0, Math.min(1, value));
     const smoother = (value: number) => {
@@ -181,8 +178,7 @@ function AsciiIntro() {
       .split('')
       .map((char, index) => {
         if (char === ' ') return ' ';
-        const revealAt = (index + 1) / target.length;
-        if (progress >= revealAt) return char;
+        if (progress >= (index + 1) / target.length) return char;
         return matrixChars[(frame * 5 + index * 11) % matrixChars.length];
       })
       .join('');
@@ -195,8 +191,9 @@ function AsciiIntro() {
       if (!octx) return;
 
       heroSize = Math.min(width < 800 ? width * 0.27 : width * 0.22, 350);
-      glyphSize = width < 800 ? 7.2 : 8.5;
-      rowGap = width < 800 ? 36 : 40;
+      glyphSize = width < 800 ? 6.4 : 7.6;
+      rowGap = width < 800 ? 25 : 30;
+
       octx.fillStyle = '#fff';
       octx.font = `700 ${heroSize}px Arial`;
       octx.textAlign = 'center';
@@ -206,7 +203,7 @@ function AsciiIntro() {
       });
 
       const data = octx.getImageData(0, 0, width, height).data;
-      const maskGap = width < 800 ? 11 : 13;
+      const maskGap = width < 800 ? 8 : 9;
       const candidates: WordGlyph[] = [];
 
       for (let y = 0; y < height; y += maskGap) {
@@ -231,28 +228,29 @@ function AsciiIntro() {
             startY: hash(seed + 1) * (height + 120) - 60,
             phase: hash(seed + 2) * Math.PI * 2,
             glyphSeed: Math.floor(hash(seed + 3) * 100000),
-            speed: 44 + hash(seed + 4) * 64,
+            speed: 46 + hash(seed + 4) * 66,
             brightness: 0.58 + hash(seed + 5) * 0.42,
           });
         }
       }
 
-      const maxWordGlyphs = width < 800 ? 860 : 1380;
+      const maxWordGlyphs = width < 800 ? 1400 : 2400;
       const stride = Math.max(1, Math.ceil(candidates.length / maxWordGlyphs));
       wordGlyphs = candidates.filter((_, index) => index % stride === 0).slice(0, maxWordGlyphs);
 
-      const columnGap = width < 800 ? 11 : 13;
+      const columnGap = width < 800 ? 9 : 10;
       const nextRain: RainGlyph[] = [];
       for (let x = columnGap / 2; x < width; x += columnGap) {
         for (let y = -rowGap; y < height + rowGap; y += rowGap) {
           const seed = x * 1.913 + y * 0.817;
           nextRain.push({
-            x: x + (hash(seed + 1) - 0.5) * columnGap * 0.18,
-            startY: y + (hash(seed + 2) - 0.5) * rowGap * 0.45,
+            x: x + (hash(seed + 1) - 0.5) * columnGap * 0.16,
+            startY: y + (hash(seed + 2) - 0.5) * rowGap * 0.42,
             glyphSeed: Math.floor(hash(seed + 3) * 100000),
-            speed: 34 + hash(seed + 4) * 68,
-            alpha: 0.075 + hash(seed + 5) * 0.2,
-            trail: hash(seed + 6) > 0.58,
+            speed: 36 + hash(seed + 4) * 70,
+            alpha: 0.07 + hash(seed + 5) * 0.19,
+            trail: hash(seed + 6),
+            drift: (hash(seed + 7) - 0.5) * 2,
           });
         }
       }
@@ -275,33 +273,37 @@ function AsciiIntro() {
     const drawRain = (elapsed: number, alphaScale: number) => {
       const time = elapsed / 1000;
       const cycleHeight = height + rowGap * 2;
-      const glyphFrame = Math.floor(elapsed / 96);
-      ctx.font = `${Math.max(7, glyphSize - 0.25)}px "Courier New", monospace`;
+      const glyphFrame = Math.floor(elapsed / 92);
+      ctx.font = `${glyphSize}px "Courier New", monospace`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
 
       rainGlyphs.forEach((glyph, index) => {
-        const x = glyph.x + Math.sin(time * 0.95 + glyph.startY * 0.018 + glyph.speed * 0.022) * 2.4;
+        const x = glyph.x
+          + Math.sin(time * 1.05 + glyph.startY * 0.018 + glyph.speed * 0.022) * 2.3
+          + glyph.drift * Math.sin(time * 0.42);
         const y = ((glyph.startY + time * glyph.speed + rowGap) % cycleHeight) - rowGap;
-        const character = glyphAt(glyph.glyphSeed + glyphFrame * 7 + index * 3);
         const alpha = glyph.alpha * alphaScale;
 
         ctx.fillStyle = `rgba(245,245,240,${alpha})`;
-        ctx.fillText(character, x, y);
+        ctx.fillText(glyphAt(glyph.glyphSeed + glyphFrame * 7 + index * 3), x, y);
 
-        if (glyph.trail) {
-          ctx.fillStyle = `rgba(245,245,240,${alpha * 0.22})`;
-          ctx.fillText(glyphAt(glyph.glyphSeed + glyphFrame * 5 + 11), x, y - rowGap * 0.34);
-          ctx.fillStyle = `rgba(245,245,240,${alpha * 0.12})`;
-          ctx.fillText(glyphAt(glyph.glyphSeed + glyphFrame * 3 + 17), x, y - rowGap * 0.68);
+        if (glyph.trail > 0.42) {
+          ctx.fillStyle = `rgba(245,245,240,${alpha * 0.25})`;
+          ctx.fillText(glyphAt(glyph.glyphSeed + glyphFrame * 5 + 11), x, y - rowGap * 0.36);
+        }
+        if (glyph.trail > 0.67) {
+          ctx.fillStyle = `rgba(245,245,240,${alpha * 0.13})`;
+          ctx.fillText(glyphAt(glyph.glyphSeed + glyphFrame * 3 + 17), x, y - rowGap * 0.72);
         }
       });
     };
 
-    const drawWord = (elapsed: number) => {
+    const drawWord = (elapsed: number, overallLock: number) => {
       const time = elapsed / 1000;
       const cycleHeight = height + 120;
-      const glyphFrame = Math.floor(elapsed / 78);
+      const glyphFrame = Math.floor(elapsed / 64);
+      const wordFinished = overallLock >= 1;
       ctx.font = `${glyphSize}px "Courier New", monospace`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
@@ -317,14 +319,15 @@ function AsciiIntro() {
         const lockedAbsoluteY = absoluteY + (targetOnCycle - absoluteY) * lock;
         const y = ((lockedAbsoluteY + 60) % cycleHeight) - 60;
         const x = glyph.tx + (
-          Math.sin(time * 2.2 + glyph.phase) * 3.4
-          + Math.sin(time * 5.8 + glyph.phase * 1.7) * 0.8
+          Math.sin(time * 2.2 + glyph.phase) * 3.1
+          + Math.sin(time * 5.8 + glyph.phase * 1.7) * 0.7
         ) * remaining;
 
-        const movingSeed = glyph.glyphSeed + glyphFrame * 11 + index * 5;
+        const movingSeed = glyph.glyphSeed + glyphFrame * 13 + index * 5;
         const stableSeed = glyph.glyphSeed + glyph.letter * 29;
-        const character = glyphAt(lock > 0.9 ? stableSeed : movingSeed);
-        const alpha = Math.min(0.98, 0.3 + glyph.brightness * 0.28 + lock * 0.4);
+        const character = glyphAt(wordFinished ? stableSeed : movingSeed);
+        const pulse = wordFinished ? 0 : Math.sin(time * 7.5 + glyph.phase) * 0.04;
+        const alpha = Math.min(0.98, 0.31 + glyph.brightness * 0.28 + lock * 0.38 + pulse);
 
         ctx.fillStyle = `rgba(245,245,240,${alpha})`;
         ctx.fillText(character, x, y);
@@ -332,7 +335,7 @@ function AsciiIntro() {
     };
 
     const drawMeta = (elapsed: number, overallLock: number) => {
-      const frame = Math.floor(elapsed / 70);
+      const frame = Math.floor(elapsed / 62);
       const topWord = overallLock >= 1
         ? 'JIMMY®'
         : scrambleToWord('JIMMY®', overallLock, frame);
@@ -360,8 +363,8 @@ function AsciiIntro() {
       ctx.globalAlpha = 1;
       ctx.fillStyle = '#000';
       ctx.fillRect(0, 0, width, height);
-      drawRain(elapsed, 1 - overallLock * 0.78);
-      drawWord(elapsed);
+      drawRain(elapsed, 1 - overallLock * 0.74);
+      drawWord(elapsed, overallLock);
       drawMeta(elapsed, overallLock);
 
       if (rawElapsed < animationDuration) {

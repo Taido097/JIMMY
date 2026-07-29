@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useLayoutEffect } from 'react';
 
 const projects = [
   { number: '01', title: 'VOID FORM', year: '2026', image: 'https://images.unsplash.com/photo-1539109136881-3be0616acf4b?auto=format&fit=crop&w=1800&q=85' },
@@ -41,15 +41,38 @@ JIMMY_2026  //////  ARCHIVE_03
 `;
 
 export default function Home() {
-  useEffect(() => {
+  useLayoutEffect(() => {
     if ('scrollRestoration' in window.history) {
       window.history.scrollRestoration = 'manual';
     }
 
-    const scrollToTop = () => window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-    scrollToTop();
-    const frame = window.requestAnimationFrame(scrollToTop);
+    if (window.location.hash) {
+      window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
+    }
 
+    const resetToTop = () => window.scrollTo(0, 0);
+    resetToTop();
+
+    const frame = window.requestAnimationFrame(resetToTop);
+    const timers = [
+      window.setTimeout(resetToTop, 0),
+      window.setTimeout(resetToTop, 80),
+      window.setTimeout(resetToTop, 250),
+      window.setTimeout(resetToTop, 700),
+    ];
+
+    window.addEventListener('pageshow', resetToTop);
+    window.addEventListener('load', resetToTop);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      timers.forEach((timer) => window.clearTimeout(timer));
+      window.removeEventListener('pageshow', resetToTop);
+      window.removeEventListener('load', resetToTop);
+    };
+  }, []);
+
+  useEffect(() => {
     const elements = document.querySelectorAll('[data-reveal]');
     const observer = new IntersectionObserver(
       (entries) => entries.forEach((entry) => entry.isIntersecting && entry.target.classList.add('is-visible')),
@@ -57,11 +80,7 @@ export default function Home() {
     );
 
     elements.forEach((element) => observer.observe(element));
-
-    return () => {
-      window.cancelAnimationFrame(frame);
-      observer.disconnect();
-    };
+    return () => observer.disconnect();
   }, []);
 
   return (

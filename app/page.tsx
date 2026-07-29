@@ -53,11 +53,39 @@ function ScrambleText({ text, className = '' }: { text: string; className?: stri
   return <span ref={ref} className={className} aria-label={text} onMouseEnter={scramble} onFocus={scramble}>{text}</span>;
 }
 
-type Particle = { x: number; y: number; sx: number; sy: number; tx: number; ty: number; size: number; char: string };
+type Particle = { sx: number; sy: number; tx: number; ty: number; size: number; char: string; phase: number };
+type AmbientParticle = { x: number; y: number; size: number; speed: number; phase: number; char: string };
 
 function AsciiIntro() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [done, setDone] = useState(false);
+  const [exiting, setExiting] = useState(false);
+
+  useEffect(() => {
+    if (done) return;
+
+    const oldBodyOverflow = document.body.style.overflow;
+    const oldHtmlOverflow = document.documentElement.style.overflow;
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+
+    const prevent = (event: Event) => event.preventDefault();
+    const preventKeys = (event: KeyboardEvent) => {
+      if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(event.key)) event.preventDefault();
+    };
+
+    window.addEventListener('wheel', prevent, { passive: false });
+    window.addEventListener('touchmove', prevent, { passive: false });
+    window.addEventListener('keydown', preventKeys, { passive: false });
+
+    return () => {
+      document.body.style.overflow = oldBodyOverflow;
+      document.documentElement.style.overflow = oldHtmlOverflow;
+      window.removeEventListener('wheel', prevent);
+      window.removeEventListener('touchmove', prevent);
+      window.removeEventListener('keydown', preventKeys);
+    };
+  }, [done]);
 
   useEffect(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -71,11 +99,13 @@ function AsciiIntro() {
     if (!ctx) return;
 
     let raf = 0;
+    let finishTimer = 0;
     let particles: Particle[] = [];
+    let ambient: AmbientParticle[] = [];
     let width = window.innerWidth;
     let height = window.innerHeight;
     const start = performance.now();
-    const duration = 12800;
+    const duration = 13200;
     const chars = '01.:;+=*#%@/\\-|';
     const ease = (p: number) => 1 - Math.pow(1 - Math.max(0, Math.min(1, p)), 3);
 
@@ -85,33 +115,44 @@ function AsciiIntro() {
       off.height = height;
       const octx = off.getContext('2d');
       if (!octx) return;
+
       const fontSize = Math.min(width * 0.19, 270);
-      octx.fillStyle = '#111';
+      octx.fillStyle = '#fff';
       octx.font = `700 ${fontSize}px Arial`;
       octx.textAlign = 'center';
       octx.textBaseline = 'middle';
       octx.fillText('JIMMY', width / 2, height / 2);
       const data = octx.getImageData(0, 0, width, height).data;
-      const gap = width < 800 ? 8 : 7;
+      const gap = width < 800 ? 6 : 5;
       particles = [];
+
       for (let y = 0; y < height; y += gap) {
         for (let x = 0; x < width; x += gap) {
-          if (data[(y * width + x) * 4 + 3] > 120) {
+          if (data[(y * width + x) * 4 + 3] > 100) {
             const angle = Math.random() * Math.PI * 2;
-            const radius = Math.max(width, height) * (0.32 + Math.random() * 0.7);
+            const radius = Math.max(width, height) * (0.38 + Math.random() * 0.9);
             particles.push({
-              x: width / 2 + Math.cos(angle) * radius,
-              y: height / 2 + Math.sin(angle) * radius,
               sx: width / 2 + Math.cos(angle) * radius,
               sy: height / 2 + Math.sin(angle) * radius,
               tx: x,
               ty: y,
-              size: 6 + Math.random() * 2,
+              size: 5 + Math.random() * 2.5,
               char: chars[Math.floor(Math.random() * chars.length)],
+              phase: Math.random() * Math.PI * 2,
             });
           }
         }
       }
+
+      const ambientCount = Math.min(6200, Math.floor((width * height) / 220));
+      ambient = Array.from({ length: ambientCount }, () => ({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        size: 4 + Math.random() * 2.5,
+        speed: 2 + Math.random() * 8,
+        phase: Math.random() * Math.PI * 2,
+        char: chars[Math.floor(Math.random() * chars.length)],
+      }));
     };
 
     const resize = () => {
@@ -126,96 +167,102 @@ function AsciiIntro() {
       buildParticles();
     };
 
+    const drawParticle = (char: string, x: number, y: number, alpha: number, size: number) => {
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = '#f5f5f0';
+      ctx.font = `${size}px "Courier New", monospace`;
+      ctx.fillText(char, x, y);
+    };
+
     const drawMeta = () => {
-      ctx.globalAlpha = 0.9;
-      ctx.fillStyle = '#161616';
+      ctx.globalAlpha = 0.92;
+      ctx.fillStyle = '#f5f5f0';
       ctx.font = '8px "Courier New", monospace';
       ctx.textAlign = 'left';
       ctx.fillText('JIMMY®', 18, 22);
       ctx.textAlign = 'right';
       ctx.fillText('WORK   ABOUT   CONTACT', width - 18, 22);
+      ctx.textAlign = 'left';
+    };
+
+    const drawAmbient = (t: number, intensity: number) => {
+      ambient.forEach((pt, index) => {
+        const driftX = Math.sin(t * 0.55 + pt.phase) * pt.speed;
+        const driftY = Math.cos(t * 0.42 + pt.phase + index * 0.002) * pt.speed;
+        drawParticle(pt.char, pt.x + driftX, pt.y + driftY, intensity * (0.12 + (index % 9) * 0.012), pt.size);
+      });
     };
 
     const draw = (now: number) => {
       const t = (now - start) / 1000;
+      ctx.globalAlpha = 1;
       ctx.clearRect(0, 0, width, height);
-      ctx.fillStyle = '#f5f5f0';
+      ctx.fillStyle = '#000';
       ctx.fillRect(0, 0, width, height);
       drawMeta();
 
-      // 0–2.4s: scattered particles drift inward.
-      if (t < 2.4) {
-        const p = ease(t / 2.4) * 0.35;
+      if (t < 2.5) {
+        const p = ease(t / 2.5) * 0.34;
+        drawAmbient(t, 1);
         particles.forEach((pt, i) => {
-          const jitter = Math.sin(t * 3 + i * 0.17) * 10;
+          const jitter = Math.sin(t * 3 + pt.phase + i * 0.02) * 12;
           const x = pt.sx + (pt.tx - pt.sx) * p + jitter;
-          const y = pt.sy + (pt.ty - pt.sy) * p + Math.cos(t * 2 + i) * 8;
-          ctx.globalAlpha = 0.22 + p * 0.8;
-          ctx.font = `${pt.size}px "Courier New", monospace`;
-          ctx.fillStyle = '#161616';
-          ctx.fillText(pt.char, x, y);
+          const y = pt.sy + (pt.ty - pt.sy) * p + Math.cos(t * 2 + pt.phase) * 10;
+          drawParticle(pt.char, x, y, 0.32 + p * 0.65, pt.size);
         });
-      }
-      // 2.4–6.6s: a much stronger particle gather into JIMMY.
-      else if (t < 6.6) {
-        const p = ease((t - 2.4) / 4.2);
+      } else if (t < 7.0) {
+        const p = ease((t - 2.5) / 4.5);
+        drawAmbient(t, 1 - p * 0.72);
         particles.forEach((pt, i) => {
-          const swirl = (1 - p) * 95;
-          const x = pt.sx + (pt.tx - pt.sx) * p + Math.sin(i * 0.31 + t * 3) * swirl;
-          const y = pt.sy + (pt.ty - pt.sy) * p + Math.cos(i * 0.23 + t * 2.4) * swirl * 0.55;
-          ctx.globalAlpha = 0.32 + p * 0.68;
-          ctx.font = `${pt.size}px "Courier New", monospace`;
-          ctx.fillStyle = '#161616';
-          ctx.fillText(pt.char, x, y);
+          const swirl = (1 - p) * 125;
+          const x = pt.sx + (pt.tx - pt.sx) * p + Math.sin(i * 0.21 + t * 3 + pt.phase) * swirl;
+          const y = pt.sy + (pt.ty - pt.sy) * p + Math.cos(i * 0.17 + t * 2.4) * swirl * 0.55;
+          drawParticle(pt.char, x, y, 0.45 + p * 0.55, pt.size);
         });
-      }
-      // 6.6–8.4s: hold the completed particle word.
-      else if (t < 8.4) {
-        const pulse = 1 + Math.sin((t - 6.6) * Math.PI) * 0.015;
+      } else if (t < 9.0) {
+        const pulse = 1 + Math.sin((t - 7.0) * Math.PI) * 0.012;
+        drawAmbient(t, 0.14);
         ctx.save();
         ctx.translate(width / 2, height / 2);
         ctx.scale(pulse, pulse);
         ctx.translate(-width / 2, -height / 2);
-        particles.forEach((pt) => {
-          ctx.globalAlpha = 0.96;
-          ctx.font = `${pt.size}px "Courier New", monospace`;
-          ctx.fillStyle = '#161616';
-          ctx.fillText(pt.char, pt.tx, pt.ty);
-        });
+        particles.forEach((pt) => drawParticle(pt.char, pt.tx, pt.ty, 0.98, pt.size));
         ctx.restore();
-      }
-      // 8.4–11.8s: particles slowly open away from the center while hero fades in beneath.
-      else {
-        const p = ease((t - 8.4) / 3.4);
+      } else if (t < 12.35) {
+        const p = ease((t - 9.0) / 3.35);
+        drawAmbient(t, Math.max(0, 0.18 - p * 0.18));
         particles.forEach((pt, i) => {
           const dx = pt.tx - width / 2;
           const dy = pt.ty - height / 2;
           const len = Math.max(1, Math.hypot(dx, dy));
-          const spread = p * Math.max(width, height) * (0.75 + (i % 9) * 0.025);
+          const spread = p * Math.max(width, height) * (0.82 + (i % 11) * 0.025);
           const x = pt.tx + (dx / len) * spread;
-          const y = pt.ty + (dy / len) * spread + Math.sin(i * 0.19 + t * 4) * (1 - p) * 12;
-          ctx.globalAlpha = Math.max(0, 1 - p * 1.12);
-          ctx.font = `${pt.size}px "Courier New", monospace`;
-          ctx.fillStyle = '#161616';
-          ctx.fillText(pt.char, x, y);
+          const y = pt.ty + (dy / len) * spread + Math.sin(i * 0.12 + t * 4) * (1 - p) * 15;
+          drawParticle(pt.char, x, y, Math.max(0, 1 - p * 1.05), pt.size);
         });
       }
 
-      if (t * 1000 < duration) raf = requestAnimationFrame(draw);
-      else setDone(true);
+      if (t * 1000 < duration) {
+        raf = requestAnimationFrame(draw);
+      } else {
+        setExiting(true);
+        finishTimer = window.setTimeout(() => setDone(true), 850);
+      }
     };
 
     resize();
     window.addEventListener('resize', resize);
     raf = requestAnimationFrame(draw);
+
     return () => {
       cancelAnimationFrame(raf);
+      window.clearTimeout(finishTimer);
       window.removeEventListener('resize', resize);
     };
   }, []);
 
   if (done) return null;
-  return <div className="ascii-intro" aria-hidden="true"><canvas ref={canvasRef} /></div>;
+  return <div className={`ascii-intro${exiting ? ' is-exiting' : ''}`} aria-hidden="true"><canvas ref={canvasRef} /></div>;
 }
 
 export default function Home() {
@@ -247,14 +294,12 @@ export default function Home() {
   return (
     <main>
       <style jsx global>{`
-        .ascii-intro{position:fixed;inset:0;z-index:1000;background:transparent;overflow:hidden;pointer-events:none;animation:introShellFade 3.4s ease 8.4s forwards}
+        .ascii-intro{position:fixed;inset:0;z-index:1000;background:#000;overflow:hidden;opacity:1;pointer-events:auto;touch-action:none;transition:opacity .85s ease}
+        .ascii-intro.is-exiting{opacity:0}
         .ascii-intro canvas{display:block;width:100%;height:100%}
-        .hero{animation:heroUnderIntro 3.4s ease 8.4s both}
         .scramble-text{display:inline-block;min-width:max-content;font-variant-numeric:tabular-nums}
         .lookbook-info h2 .scramble-text{display:block}
-        @keyframes heroUnderIntro{from{opacity:.18;transform:scale(.985)}to{opacity:1;transform:none}}
-        @keyframes introShellFade{0%{opacity:1}100%{opacity:0;visibility:hidden}}
-        @media(prefers-reduced-motion:reduce){.ascii-intro{display:none}.hero{animation:none}}
+        @media(prefers-reduced-motion:reduce){.ascii-intro{display:none}}
       `}</style>
 
       <AsciiIntro />

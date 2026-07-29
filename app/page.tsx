@@ -10,13 +10,26 @@ const projects = [
 
 export default function Home() {
   useEffect(() => {
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
+    }
+
+    const scrollToTop = () => window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    scrollToTop();
+    const frame = window.requestAnimationFrame(scrollToTop);
+
     const elements = document.querySelectorAll('[data-reveal]');
     const observer = new IntersectionObserver(
       (entries) => entries.forEach((entry) => entry.isIntersecting && entry.target.classList.add('is-visible')),
       { threshold: 0.04, rootMargin: '0px 0px 8% 0px' }
     );
+
     elements.forEach((element) => observer.observe(element));
-    return () => observer.disconnect();
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      observer.disconnect();
+    };
   }, []);
 
   return (

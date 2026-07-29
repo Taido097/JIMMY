@@ -60,10 +60,9 @@ function ScrambleText({ text, className = '' }: { text: string; className?: stri
 }
 
 type Particle = {
-  sx: number;
-  sy: number;
   tx: number;
   ty: number;
+  letter: number;
   phase: number;
   size: number;
 };
@@ -154,13 +153,19 @@ function AsciiIntro() {
     let ambient: AmbientParticle[] = [];
     let width = window.innerWidth;
     let height = window.innerHeight;
+    let heroSize = 0;
 
     const centers = [0.065, 0.245, 0.44, 0.685, 0.925];
     const letters = ['J', 'I', 'M', 'M', 'Y'];
     const startedAt = performance.now();
-    const animationDuration = 7600;
+    const preScramble = 1050;
+    const letterDuration = 720;
+    const finalHold = 1250;
+    const animationDuration = preScramble + letterDuration * letters.length + finalHold;
     const clamp = (value: number) => Math.max(0, Math.min(1, value));
     const ease = (value: number) => 1 - Math.pow(1 - clamp(value), 3);
+    const fract = (value: number) => value - Math.floor(value);
+    const noise = (seed: number) => fract(Math.sin(seed * 12.9898) * 43758.5453);
 
     const buildParticles = () => {
       const offscreen = document.createElement('canvas');
@@ -169,7 +174,7 @@ function AsciiIntro() {
       const octx = offscreen.getContext('2d', { willReadFrequently: true });
       if (!octx) return;
 
-      const heroSize = Math.min(width < 800 ? width * 0.27 : width * 0.22, 350);
+      heroSize = Math.min(width < 800 ? width * 0.27 : width * 0.22, 350);
       octx.fillStyle = '#fff';
       octx.font = `700 ${heroSize}px Arial`;
       octx.textAlign = 'center';
@@ -184,17 +189,25 @@ function AsciiIntro() {
 
       for (let y = 0; y < height; y += gap) {
         for (let x = 0; x < width; x += gap) {
-          if (data[(y * width + x) * 4 + 3] > 120) {
-            const angle = Math.random() * Math.PI * 2;
-            candidates.push({
-              sx: width / 2 + Math.cos(angle) * width * (0.5 + Math.random() * 0.45),
-              sy: height / 2 + Math.sin(angle) * height * (0.4 + Math.random() * 0.5),
-              tx: x,
-              ty: y,
-              phase: Math.random() * Math.PI * 2,
-              size: width < 800 ? 1.35 : 1.6,
-            });
-          }
+          if (data[(y * width + x) * 4 + 3] <= 120) continue;
+
+          let letter = 0;
+          let closest = Number.POSITIVE_INFINITY;
+          centers.forEach((center, index) => {
+            const distance = Math.abs(x - width * center);
+            if (distance < closest) {
+              closest = distance;
+              letter = index;
+            }
+          });
+
+          candidates.push({
+            tx: x,
+            ty: y,
+            letter,
+            phase: Math.random() * Math.PI * 2,
+            size: width < 800 ? 1.35 : 1.6,
+          });
         }
       }
 
@@ -202,11 +215,11 @@ function AsciiIntro() {
       const stride = Math.max(1, Math.ceil(candidates.length / maxParticles));
       particles = candidates.filter((_, index) => index % stride === 0).slice(0, maxParticles);
 
-      ambient = Array.from({ length: width < 800 ? 420 : 780 }, () => ({
+      ambient = Array.from({ length: width < 800 ? 360 : 620 }, () => ({
         x: Math.random() * width,
         y: Math.random() * height,
         phase: Math.random() * Math.PI * 2,
-        size: 0.8 + Math.random() * 1.1,
+        size: 0.7 + Math.random() * 1,
       }));
     };
 
@@ -222,86 +235,50 @@ function AsciiIntro() {
       buildParticles();
     };
 
-    const drawDots = (progress: number, alpha: number) => {
-      ctx.fillStyle = `rgba(245,245,240,${alpha})`;
-      ctx.beginPath();
-
-      particles.forEach((particle, index) => {
-        const movement = ease(progress);
-        const remaining = 1 - movement;
-        const x = particle.sx
-          + (particle.tx - particle.sx) * movement
-          + Math.sin(particle.phase + index * 0.015 + progress * 5) * 38 * remaining;
-        const y = particle.sy
-          + (particle.ty - particle.sy) * movement
-          + Math.cos(particle.phase + index * 0.011 + progress * 4) * 22 * remaining;
-        ctx.rect(x, y, particle.size, particle.size);
-      });
-
-      ctx.fill();
-    };
-
     const drawAmbient = (time: number, alpha: number) => {
       ctx.fillStyle = `rgba(245,245,240,${alpha})`;
       ctx.beginPath();
-
       ambient.forEach((particle) => {
         ctx.rect(
-          particle.x + Math.sin(time * 0.7 + particle.phase) * 10,
-          particle.y + Math.cos(time * 0.55 + particle.phase) * 7,
+          particle.x + Math.sin(time * 0.7 + particle.phase) * 9,
+          particle.y + Math.cos(time * 0.55 + particle.phase) * 6,
           particle.size,
           particle.size,
         );
       });
-
       ctx.fill();
     };
 
-    const drawParticleScramble = (progress: number, elapsed: number) => {
-      const resolved = ease(progress);
-      const frame = Math.floor(elapsed / 48);
-      const count = particles.length;
-      const baseApproach = 0.9 + resolved * 0.1;
+    const drawParticleScramble = (elapsed: number) => {
+      const frame = Math.floor(elapsed / 52);
+      const cloudWidth = width < 800 ? width * 0.2 : width * 0.15;
+      const cloudHeight = heroSize * 1.05;
 
+      ctx.fillStyle = '#f5f5f0';
       ctx.beginPath();
 
       particles.forEach((particle, index) => {
-        const horizontalPosition = particle.tx / Math.max(1, width);
-        const lock = ease(clamp((resolved - horizontalPosition * 0.3) / 0.7));
+        const letterStart = preScramble + particle.letter * letterDuration;
+        const lock = ease((elapsed - letterStart) / letterDuration);
         const remaining = 1 - lock;
 
-        // The scan-line particle order makes nearby indexes nearby points in a letter.
-        // Changing this offset every few frames makes the particles shuffle between slots.
-        const jumpSeed = (frame * 17 + index * 13) % 23;
-        const jump = jumpSeed - 11;
-        const neighbor = particles[(index + jump + count) % count] ?? particle;
+        const randomX = width * centers[particle.letter]
+          + (noise(frame * 41 + index * 17 + 1) - 0.5) * cloudWidth;
+        const randomY = height * 0.5
+          + (noise(frame * 67 + index * 29 + 2) - 0.5) * cloudHeight;
 
-        const shuffledTargetX = neighbor.tx;
-        const shuffledTargetY = neighbor.ty;
-        const targetX = shuffledTargetX + (particle.tx - shuffledTargetX) * lock;
-        const targetY = shuffledTargetY + (particle.ty - shuffledTargetY) * lock;
+        const jitterX = Math.sin(frame * 0.72 + particle.phase) * remaining * 6;
+        const jitterY = Math.cos(frame * 0.61 + particle.phase) * remaining * 5;
+        const x = randomX + (particle.tx - randomX) * lock + jitterX;
+        const y = randomY + (particle.ty - randomY) * lock + jitterY;
 
-        const approachX = particle.sx + (targetX - particle.sx) * baseApproach;
-        const approachY = particle.sy + (targetY - particle.sy) * baseApproach;
-        const snapX = (((frame * 7 + index * 5) % 7) - 3) * remaining * 2.2;
-        const snapY = (((frame * 11 + index * 3) % 7) - 3) * remaining * 1.7;
-
-        const x = approachX + snapX + Math.sin(particle.phase + frame * 0.55) * remaining * 5;
-        const y = approachY + snapY + Math.cos(particle.phase + frame * 0.43) * remaining * 4;
-        const flicker = 0.62 + (((frame + index * 3) % 9) / 9) * 0.36;
-        const size = particle.size * (0.8 + lock * 0.2);
-
-        ctx.fillStyle = `rgba(245,245,240,${flicker})`;
-        ctx.fillRect(x, y, size, size);
+        const flickerOff = lock < 0.98 && (frame + index * 3) % 13 === 0;
+        if (!flickerOff) {
+          const size = particle.size * (0.78 + lock * 0.22);
+          ctx.rect(x, y, size, size);
+        }
       });
-    };
 
-    const drawFinalWord = () => {
-      ctx.fillStyle = 'rgba(245,245,240,0.98)';
-      ctx.beginPath();
-      particles.forEach((particle) => {
-        ctx.rect(particle.tx, particle.ty, particle.size, particle.size);
-      });
       ctx.fill();
     };
 
@@ -320,25 +297,12 @@ function AsciiIntro() {
     const draw = (now: number) => {
       const elapsed = now - startedAt;
       const time = elapsed / 1000;
+      const overallLock = clamp((elapsed - preScramble) / (letterDuration * letters.length));
 
       ctx.fillStyle = '#000';
       ctx.fillRect(0, 0, width, height);
-
-      if (elapsed < 1500) {
-        const progress = elapsed / 1500;
-        drawAmbient(time, 0.25);
-        drawDots(progress * 0.2, 0.38 + progress * 0.25);
-      } else if (elapsed < 4450) {
-        const progress = (elapsed - 1500) / 2950;
-        drawAmbient(time, 0.22 * (1 - progress));
-        drawDots(0.2 + progress * 0.68, 0.68 + progress * 0.25);
-      } else if (elapsed < 6350) {
-        const progress = (elapsed - 4450) / 1900;
-        drawParticleScramble(progress, elapsed);
-      } else {
-        drawFinalWord();
-      }
-
+      drawAmbient(time, 0.2 * (1 - overallLock) + 0.035);
+      drawParticleScramble(elapsed);
       drawMeta();
 
       if (elapsed < animationDuration) {

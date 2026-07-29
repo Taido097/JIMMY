@@ -53,8 +53,21 @@ function ScrambleText({ text, className = '' }: { text: string; className?: stri
   return <span ref={ref} className={className} aria-label={text} onMouseEnter={scramble} onFocus={scramble}>{text}</span>;
 }
 
-type Particle = { sx: number; sy: number; tx: number; ty: number; size: number; char: string; phase: number };
-type AmbientParticle = { x: number; y: number; size: number; speed: number; phase: number; char: string };
+type Particle = {
+  sx: number;
+  sy: number;
+  tx: number;
+  ty: number;
+  phase: number;
+  size: number;
+};
+
+type AmbientParticle = {
+  x: number;
+  y: number;
+  phase: number;
+  size: number;
+};
 
 function AsciiIntro() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -95,7 +108,7 @@ function AsciiIntro() {
 
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { alpha: false });
     if (!ctx) return;
 
     let raf = 0;
@@ -105,77 +118,103 @@ function AsciiIntro() {
     let width = window.innerWidth;
     let height = window.innerHeight;
     const start = performance.now();
-    const duration = 13200;
-    const chars = '01.:;+=*#%@/\\-|';
-    const ease = (p: number) => 1 - Math.pow(1 - Math.max(0, Math.min(1, p)), 3);
+    const totalDuration = 7650;
+    const ease = (value: number) => 1 - Math.pow(1 - Math.max(0, Math.min(1, value)), 3);
 
     const buildParticles = () => {
-      const off = document.createElement('canvas');
-      off.width = width;
-      off.height = height;
-      const octx = off.getContext('2d');
-      if (!octx) return;
+      const offscreen = document.createElement('canvas');
+      offscreen.width = width;
+      offscreen.height = height;
+      const offscreenContext = offscreen.getContext('2d', { willReadFrequently: true });
+      if (!offscreenContext) return;
 
-      const fontSize = Math.min(width * 0.19, 270);
-      octx.fillStyle = '#fff';
-      octx.font = `700 ${fontSize}px Arial`;
-      octx.textAlign = 'center';
-      octx.textBaseline = 'middle';
-      octx.fillText('JIMMY', width / 2, height / 2);
-      const data = octx.getImageData(0, 0, width, height).data;
-      const gap = width < 800 ? 6 : 5;
-      particles = [];
+      const heroSize = Math.min(width < 800 ? width * 0.27 : width * 0.22, 350);
+      const letterCenters = [0.065, 0.245, 0.44, 0.685, 0.925];
+      const letters = ['J', 'I', 'M', 'M', 'Y'];
+
+      offscreenContext.fillStyle = '#fff';
+      offscreenContext.font = `700 ${heroSize}px Arial`;
+      offscreenContext.textAlign = 'center';
+      offscreenContext.textBaseline = 'middle';
+      letters.forEach((letter, index) => {
+        offscreenContext.fillText(letter, width * letterCenters[index], height * 0.5);
+      });
+
+      const imageData = offscreenContext.getImageData(0, 0, width, height).data;
+      const gap = width < 800 ? 6 : 7;
+      const candidates: Particle[] = [];
 
       for (let y = 0; y < height; y += gap) {
         for (let x = 0; x < width; x += gap) {
-          if (data[(y * width + x) * 4 + 3] > 100) {
+          if (imageData[(y * width + x) * 4 + 3] > 120) {
             const angle = Math.random() * Math.PI * 2;
-            const radius = Math.max(width, height) * (0.38 + Math.random() * 0.9);
-            particles.push({
-              sx: width / 2 + Math.cos(angle) * radius,
-              sy: height / 2 + Math.sin(angle) * radius,
+            const radiusX = width * (0.55 + Math.random() * 0.55);
+            const radiusY = height * (0.45 + Math.random() * 0.55);
+            candidates.push({
+              sx: width / 2 + Math.cos(angle) * radiusX,
+              sy: height / 2 + Math.sin(angle) * radiusY,
               tx: x,
               ty: y,
-              size: 5 + Math.random() * 2.5,
-              char: chars[Math.floor(Math.random() * chars.length)],
               phase: Math.random() * Math.PI * 2,
+              size: width < 800 ? 1.35 : 1.6,
             });
           }
         }
       }
 
-      const ambientCount = Math.min(6200, Math.floor((width * height) / 220));
+      const maxParticles = width < 800 ? 3600 : 5200;
+      const stride = Math.max(1, Math.ceil(candidates.length / maxParticles));
+      particles = candidates.filter((_, index) => index % stride === 0).slice(0, maxParticles);
+
+      const ambientCount = width < 800 ? 450 : 850;
       ambient = Array.from({ length: ambientCount }, () => ({
         x: Math.random() * width,
         y: Math.random() * height,
-        size: 4 + Math.random() * 2.5,
-        speed: 2 + Math.random() * 8,
         phase: Math.random() * Math.PI * 2,
-        char: chars[Math.floor(Math.random() * chars.length)],
+        size: 0.8 + Math.random() * 1.1,
       }));
     };
 
     const resize = () => {
       width = window.innerWidth;
       height = window.innerHeight;
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      canvas.width = width * dpr;
-      canvas.height = height * dpr;
+      const dpr = Math.min(window.devicePixelRatio || 1, 1.35);
+      canvas.width = Math.round(width * dpr);
+      canvas.height = Math.round(height * dpr);
       canvas.style.width = `${width}px`;
       canvas.style.height = `${height}px`;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       buildParticles();
     };
 
-    const drawParticle = (char: string, x: number, y: number, alpha: number, size: number) => {
-      ctx.globalAlpha = alpha;
-      ctx.fillStyle = '#f5f5f0';
-      ctx.font = `${size}px "Courier New", monospace`;
-      ctx.fillText(char, x, y);
+    const drawDots = (progress: number, alpha: number) => {
+      ctx.fillStyle = `rgba(245,245,240,${alpha})`;
+      ctx.beginPath();
+      particles.forEach((particle, index) => {
+        const movement = ease(progress);
+        const remaining = 1 - movement;
+        const driftX = Math.sin(particle.phase + index * 0.015 + progress * 5) * 42 * remaining;
+        const driftY = Math.cos(particle.phase + index * 0.011 + progress * 4) * 24 * remaining;
+        const x = particle.sx + (particle.tx - particle.sx) * movement + driftX;
+        const y = particle.sy + (particle.ty - particle.sy) * movement + driftY;
+        ctx.rect(x, y, particle.size, particle.size);
+      });
+      ctx.fill();
     };
 
-    const drawMeta = () => {
-      ctx.globalAlpha = 0.92;
+    const drawAmbient = (time: number, alpha: number) => {
+      ctx.fillStyle = `rgba(245,245,240,${alpha})`;
+      ctx.beginPath();
+      ambient.forEach((particle) => {
+        const x = particle.x + Math.sin(time * 0.7 + particle.phase) * 10;
+        const y = particle.y + Math.cos(time * 0.55 + particle.phase) * 7;
+        ctx.rect(x, y, particle.size, particle.size);
+      });
+      ctx.fill();
+    };
+
+    const drawMeta = (alpha: number) => {
+      ctx.globalAlpha = alpha;
       ctx.fillStyle = '#f5f5f0';
       ctx.font = '8px "Courier New", monospace';
       ctx.textAlign = 'left';
@@ -183,70 +222,47 @@ function AsciiIntro() {
       ctx.textAlign = 'right';
       ctx.fillText('WORK   ABOUT   CONTACT', width - 18, 22);
       ctx.textAlign = 'left';
-    };
-
-    const drawAmbient = (t: number, intensity: number) => {
-      ambient.forEach((pt, index) => {
-        const driftX = Math.sin(t * 0.55 + pt.phase) * pt.speed;
-        const driftY = Math.cos(t * 0.42 + pt.phase + index * 0.002) * pt.speed;
-        drawParticle(pt.char, pt.x + driftX, pt.y + driftY, intensity * (0.12 + (index % 9) * 0.012), pt.size);
-      });
+      ctx.globalAlpha = 1;
     };
 
     const draw = (now: number) => {
-      const t = (now - start) / 1000;
+      const elapsed = now - start;
+      const time = elapsed / 1000;
+
       ctx.globalAlpha = 1;
-      ctx.clearRect(0, 0, width, height);
       ctx.fillStyle = '#000';
       ctx.fillRect(0, 0, width, height);
-      drawMeta();
 
-      if (t < 2.5) {
-        const p = ease(t / 2.5) * 0.34;
-        drawAmbient(t, 1);
-        particles.forEach((pt, i) => {
-          const jitter = Math.sin(t * 3 + pt.phase + i * 0.02) * 12;
-          const x = pt.sx + (pt.tx - pt.sx) * p + jitter;
-          const y = pt.sy + (pt.ty - pt.sy) * p + Math.cos(t * 2 + pt.phase) * 10;
-          drawParticle(pt.char, x, y, 0.32 + p * 0.65, pt.size);
+      if (elapsed < 1600) {
+        const progress = elapsed / 1600;
+        drawAmbient(time, 0.25);
+        drawDots(progress * 0.2, 0.38 + progress * 0.25);
+        drawMeta(0.9);
+      } else if (elapsed < 5200) {
+        const progress = (elapsed - 1600) / 3600;
+        drawAmbient(time, 0.22 * (1 - progress));
+        drawDots(0.2 + progress * 0.8, 0.68 + progress * 0.3);
+        drawMeta(0.9);
+      } else if (elapsed < 6350) {
+        particles.forEach((particle) => {
+          ctx.fillStyle = 'rgba(245,245,240,0.98)';
+          ctx.fillRect(particle.tx, particle.ty, particle.size, particle.size);
         });
-      } else if (t < 7.0) {
-        const p = ease((t - 2.5) / 4.5);
-        drawAmbient(t, 1 - p * 0.72);
-        particles.forEach((pt, i) => {
-          const swirl = (1 - p) * 125;
-          const x = pt.sx + (pt.tx - pt.sx) * p + Math.sin(i * 0.21 + t * 3 + pt.phase) * swirl;
-          const y = pt.sy + (pt.ty - pt.sy) * p + Math.cos(i * 0.17 + t * 2.4) * swirl * 0.55;
-          drawParticle(pt.char, x, y, 0.45 + p * 0.55, pt.size);
+        drawMeta(0.9);
+      } else if (elapsed < 7200) {
+        const fade = 1 - ease((elapsed - 6350) / 850);
+        particles.forEach((particle) => {
+          ctx.fillStyle = `rgba(245,245,240,${fade})`;
+          ctx.fillRect(particle.tx, particle.ty, particle.size, particle.size);
         });
-      } else if (t < 9.0) {
-        const pulse = 1 + Math.sin((t - 7.0) * Math.PI) * 0.012;
-        drawAmbient(t, 0.14);
-        ctx.save();
-        ctx.translate(width / 2, height / 2);
-        ctx.scale(pulse, pulse);
-        ctx.translate(-width / 2, -height / 2);
-        particles.forEach((pt) => drawParticle(pt.char, pt.tx, pt.ty, 0.98, pt.size));
-        ctx.restore();
-      } else if (t < 12.35) {
-        const p = ease((t - 9.0) / 3.35);
-        drawAmbient(t, Math.max(0, 0.18 - p * 0.18));
-        particles.forEach((pt, i) => {
-          const dx = pt.tx - width / 2;
-          const dy = pt.ty - height / 2;
-          const len = Math.max(1, Math.hypot(dx, dy));
-          const spread = p * Math.max(width, height) * (0.82 + (i % 11) * 0.025);
-          const x = pt.tx + (dx / len) * spread;
-          const y = pt.ty + (dy / len) * spread + Math.sin(i * 0.12 + t * 4) * (1 - p) * 15;
-          drawParticle(pt.char, x, y, Math.max(0, 1 - p * 1.05), pt.size);
-        });
+        drawMeta(fade * 0.9);
       }
 
-      if (t * 1000 < duration) {
+      if (elapsed < totalDuration) {
         raf = requestAnimationFrame(draw);
       } else {
         setExiting(true);
-        finishTimer = window.setTimeout(() => setDone(true), 850);
+        finishTimer = window.setTimeout(() => setDone(true), 450);
       }
     };
 
@@ -294,7 +310,7 @@ export default function Home() {
   return (
     <main>
       <style jsx global>{`
-        .ascii-intro{position:fixed;inset:0;z-index:1000;background:#000;overflow:hidden;opacity:1;pointer-events:auto;touch-action:none;transition:opacity .85s ease}
+        .ascii-intro{position:fixed;inset:0;z-index:1000;background:#000;overflow:hidden;opacity:1;pointer-events:auto;touch-action:none;transition:opacity .45s ease}
         .ascii-intro.is-exiting{opacity:0}
         .ascii-intro canvas{display:block;width:100%;height:100%}
         .scramble-text{display:inline-block;min-width:max-content;font-variant-numeric:tabular-nums}

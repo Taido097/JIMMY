@@ -20,6 +20,7 @@ JIMMY_2026  //////  ARCHIVE_03
 `;
 
 const scrambleChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#$%&@*?/';
+const matrixChars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ#$%&@<>/\\[]{}';
 
 function ScrambleText({ text, className = '' }: { text: string; className?: string }) {
   const ref = useRef<HTMLSpanElement>(null);
@@ -59,19 +60,20 @@ function ScrambleText({ text, className = '' }: { text: string; className?: stri
   );
 }
 
-type Particle = {
+type MatrixParticle = {
   tx: number;
   ty: number;
   letter: number;
   phase: number;
-  size: number;
+  glyphSeed: number;
 };
 
-type AmbientParticle = {
+type AmbientGlyph = {
   x: number;
   y: number;
   phase: number;
-  size: number;
+  glyphSeed: number;
+  alpha: number;
 };
 
 function AsciiIntro() {
@@ -149,11 +151,12 @@ function AsciiIntro() {
     if (!ctx) return;
 
     let raf = 0;
-    let particles: Particle[] = [];
-    let ambient: AmbientParticle[] = [];
+    let particles: MatrixParticle[] = [];
+    let ambient: AmbientGlyph[] = [];
     let width = window.innerWidth;
     let height = window.innerHeight;
     let heroSize = 0;
+    let glyphSize = 9;
 
     const centers = [0.065, 0.245, 0.44, 0.685, 0.925];
     const letters = ['J', 'I', 'M', 'M', 'Y'];
@@ -166,6 +169,7 @@ function AsciiIntro() {
     const ease = (value: number) => 1 - Math.pow(1 - clamp(value), 3);
     const fract = (value: number) => value - Math.floor(value);
     const noise = (seed: number) => fract(Math.sin(seed * 12.9898) * 43758.5453);
+    const glyphAt = (seed: number) => matrixChars[Math.abs(seed) % matrixChars.length];
 
     const buildParticles = () => {
       const offscreen = document.createElement('canvas');
@@ -175,6 +179,7 @@ function AsciiIntro() {
       if (!octx) return;
 
       heroSize = Math.min(width < 800 ? width * 0.27 : width * 0.22, 350);
+      glyphSize = width < 800 ? 7.2 : 9;
       octx.fillStyle = '#fff';
       octx.font = `700 ${heroSize}px Arial`;
       octx.textAlign = 'center';
@@ -184,8 +189,8 @@ function AsciiIntro() {
       });
 
       const data = octx.getImageData(0, 0, width, height).data;
-      const gap = width < 800 ? 6 : 7;
-      const candidates: Particle[] = [];
+      const gap = width < 800 ? 8 : 10;
+      const candidates: MatrixParticle[] = [];
 
       for (let y = 0; y < height; y += gap) {
         for (let x = 0; x < width; x += gap) {
@@ -206,27 +211,28 @@ function AsciiIntro() {
             ty: y,
             letter,
             phase: Math.random() * Math.PI * 2,
-            size: width < 800 ? 1.35 : 1.6,
+            glyphSeed: Math.floor(Math.random() * 10000),
           });
         }
       }
 
-      const maxParticles = width < 800 ? 3400 : 5000;
+      const maxParticles = width < 800 ? 1250 : 2100;
       const stride = Math.max(1, Math.ceil(candidates.length / maxParticles));
       particles = candidates.filter((_, index) => index % stride === 0).slice(0, maxParticles);
 
-      ambient = Array.from({ length: width < 800 ? 360 : 620 }, () => ({
+      ambient = Array.from({ length: width < 800 ? 160 : 300 }, () => ({
         x: Math.random() * width,
         y: Math.random() * height,
         phase: Math.random() * Math.PI * 2,
-        size: 0.7 + Math.random() * 1,
+        glyphSeed: Math.floor(Math.random() * 10000),
+        alpha: 0.12 + Math.random() * 0.28,
       }));
     };
 
     const resize = () => {
       width = window.innerWidth;
       height = window.innerHeight;
-      const dpr = Math.min(window.devicePixelRatio || 1, 1.35);
+      const dpr = Math.min(window.devicePixelRatio || 1, 1.25);
       canvas.width = Math.round(width * dpr);
       canvas.height = Math.round(height * dpr);
       canvas.style.width = `${width}px`;
@@ -235,27 +241,28 @@ function AsciiIntro() {
       buildParticles();
     };
 
-    const drawAmbient = (time: number, alpha: number) => {
-      ctx.fillStyle = `rgba(245,245,240,${alpha})`;
-      ctx.beginPath();
-      ambient.forEach((particle) => {
-        ctx.rect(
-          particle.x + Math.sin(time * 0.7 + particle.phase) * 9,
-          particle.y + Math.cos(time * 0.55 + particle.phase) * 6,
-          particle.size,
-          particle.size,
-        );
+    const drawAmbient = (time: number, frame: number, alpha: number) => {
+      ctx.font = `${Math.max(7, glyphSize - 1)}px "Courier New", monospace`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      ambient.forEach((glyph, index) => {
+        const x = glyph.x + Math.sin(time * 0.55 + glyph.phase) * 9;
+        const y = glyph.y + Math.cos(time * 0.42 + glyph.phase) * 6;
+        const character = glyphAt(glyph.glyphSeed + Math.floor(frame / 3) * 7 + index);
+        ctx.fillStyle = `rgba(245,245,240,${alpha * glyph.alpha})`;
+        ctx.fillText(character, x, y);
       });
-      ctx.fill();
     };
 
-    const drawParticleScramble = (elapsed: number) => {
-      const frame = Math.floor(elapsed / 52);
+    const drawMatrixScramble = (elapsed: number) => {
+      const frame = Math.floor(elapsed / 54);
       const cloudWidth = width < 800 ? width * 0.2 : width * 0.15;
       const cloudHeight = heroSize * 1.05;
 
-      ctx.fillStyle = '#f5f5f0';
-      ctx.beginPath();
+      ctx.font = `${glyphSize}px "Courier New", monospace`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
 
       particles.forEach((particle, index) => {
         const letterStart = preScramble + particle.letter * letterDuration;
@@ -272,14 +279,16 @@ function AsciiIntro() {
         const x = randomX + (particle.tx - randomX) * lock + jitterX;
         const y = randomY + (particle.ty - randomY) * lock + jitterY;
 
-        const flickerOff = lock < 0.98 && (frame + index * 3) % 13 === 0;
-        if (!flickerOff) {
-          const size = particle.size * (0.78 + lock * 0.22);
-          ctx.rect(x, y, size, size);
-        }
-      });
+        const changingSeed = particle.glyphSeed + frame * 11 + index * 3;
+        const stableSeed = particle.glyphSeed + particle.letter * 19;
+        const character = glyphAt(lock > 0.94 ? stableSeed : changingSeed);
+        const flickerOff = lock < 0.98 && (frame + index * 3) % 17 === 0;
+        if (flickerOff) return;
 
-      ctx.fill();
+        const alpha = 0.48 + lock * 0.5 + (((frame + index) % 5) / 5) * remaining * 0.18;
+        ctx.fillStyle = `rgba(245,245,240,${Math.min(0.98, alpha)})`;
+        ctx.fillText(character, x, y);
+      });
     };
 
     const drawMeta = () => {
@@ -297,12 +306,13 @@ function AsciiIntro() {
     const draw = (now: number) => {
       const elapsed = now - startedAt;
       const time = elapsed / 1000;
+      const frame = Math.floor(elapsed / 54);
       const overallLock = clamp((elapsed - preScramble) / (letterDuration * letters.length));
 
       ctx.fillStyle = '#000';
       ctx.fillRect(0, 0, width, height);
-      drawAmbient(time, 0.2 * (1 - overallLock) + 0.035);
-      drawParticleScramble(elapsed);
+      drawAmbient(time, frame, 0.85 * (1 - overallLock) + 0.16);
+      drawMatrixScramble(elapsed);
       drawMeta();
 
       if (elapsed < animationDuration) {

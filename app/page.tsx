@@ -251,7 +251,9 @@ function AsciiIntro() {
             startY: y + (hash(seed + 2) - 0.5) * rowGap * 0.42,
             glyphSeed: Math.floor(hash(seed + 3) * 100000),
             speed: 36 + hash(seed + 4) * 70,
-            alpha: 0.07 + hash(seed + 5) * 0.19,
+            alpha: width < 800
+              ? 0.2 + hash(seed + 5) * 0.32
+              : 0.07 + hash(seed + 5) * 0.19,
             trail: hash(seed + 6),
             drift: (hash(seed + 7) - 0.5) * 2,
           });
@@ -277,6 +279,7 @@ function AsciiIntro() {
       const time = elapsed / 1000;
       const cycleHeight = height + rowGap * 2;
       const glyphFrame = Math.floor(elapsed / 92);
+      const mobileBoost = width < 800 ? 1.35 : 1;
       ctx.font = `${glyphSize}px "Courier New", monospace`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
@@ -286,17 +289,17 @@ function AsciiIntro() {
           + Math.sin(time * 1.05 + glyph.startY * 0.018 + glyph.speed * 0.022) * 2.3
           + glyph.drift * Math.sin(time * 0.42);
         const y = ((glyph.startY + time * glyph.speed + rowGap) % cycleHeight) - rowGap;
-        const alpha = glyph.alpha * alphaScale;
+        const alpha = Math.min(1, glyph.alpha * alphaScale * mobileBoost);
 
-        ctx.fillStyle = `rgba(245,245,240,${alpha})`;
+        ctx.fillStyle = `rgba(255,255,255,${alpha})`;
         ctx.fillText(glyphAt(glyph.glyphSeed + glyphFrame * 7 + index * 3), x, y);
 
         if (glyph.trail > 0.42) {
-          ctx.fillStyle = `rgba(245,245,240,${alpha * 0.25})`;
+          ctx.fillStyle = `rgba(255,255,255,${alpha * 0.34})`;
           ctx.fillText(glyphAt(glyph.glyphSeed + glyphFrame * 5 + 11), x, y - rowGap * 0.36);
         }
         if (glyph.trail > 0.67) {
-          ctx.fillStyle = `rgba(245,245,240,${alpha * 0.13})`;
+          ctx.fillStyle = `rgba(255,255,255,${alpha * 0.2})`;
           ctx.fillText(glyphAt(glyph.glyphSeed + glyphFrame * 3 + 17), x, y - rowGap * 0.72);
         }
       });
@@ -316,6 +319,7 @@ function AsciiIntro() {
       const slowBlinkFrame = Math.floor(Math.max(0, slowBlinkCycle) / 1250);
       const slowBlinkPhase = ((Math.max(0, slowBlinkCycle) % 1250) + 1250) % 1250;
       const slowScrambleBlink = fullySettled && slowBlinkPhase < 115;
+      const mobile = width < 800;
 
       ctx.font = `${glyphSize}px "Courier New", monospace`;
       ctx.textAlign = 'center';
@@ -355,8 +359,11 @@ function AsciiIntro() {
           0.26,
           0.31 + glyph.brightness * 0.28 + lock * 0.38 + synchronizedPulse + blinkDip,
         ));
+        const displayAlpha = mobile
+          ? Math.min(1, Math.max(0.78, alpha * 1.18 + 0.12))
+          : alpha;
 
-        ctx.fillStyle = `rgba(245,245,240,${alpha})`;
+        ctx.fillStyle = `rgba(255,255,255,${displayAlpha})`;
         ctx.fillText(character, x, y);
       });
     };
@@ -367,8 +374,8 @@ function AsciiIntro() {
         ? 'JIMMY®'
         : scrambleToWord('JIMMY®', overallLock, frame);
 
-      ctx.globalAlpha = 0.9;
-      ctx.fillStyle = '#f5f5f0';
+      ctx.globalAlpha = width < 800 ? 1 : 0.9;
+      ctx.fillStyle = '#fff';
       ctx.font = '8px "Courier New", monospace';
       ctx.textAlign = 'left';
       ctx.fillText(topWord, 18, 22);
@@ -464,12 +471,12 @@ export default function Home() {
         .ascii-intro-overlay{position:fixed;inset:0;z-index:1000;background:#000;overflow:hidden;transform:translateY(0);will-change:transform;touch-action:none;transition:transform .85s cubic-bezier(.76,0,.24,1)}
         .ascii-intro-overlay.is-leaving{transform:translateY(-100%);pointer-events:none}
         .ascii-intro-overlay canvas{display:block;width:100%;height:100%}
-        .intro-scroll-cue{position:absolute;left:50%;bottom:22px;transform:translateX(-50%) translateY(10px);border:0;background:transparent;color:#f5f5f0;font:8px/1.35 "Courier New",monospace;letter-spacing:.16em;text-align:center;opacity:0;transition:opacity .35s ease,transform .35s ease;cursor:pointer}
-        .ascii-intro-overlay.is-ready .intro-scroll-cue{opacity:.78;transform:translateX(-50%) translateY(0)}
+        .intro-scroll-cue{position:absolute;left:50%;bottom:22px;transform:translateX(-50%) translateY(10px);border:0;background:transparent;color:#fff;font:8px/1.35 "Courier New",monospace;letter-spacing:.16em;text-align:center;opacity:0;transition:opacity .35s ease,transform .35s ease;cursor:pointer}
+        .ascii-intro-overlay.is-ready .intro-scroll-cue{opacity:.9;transform:translateX(-50%) translateY(0)}
         .ascii-intro-overlay.is-leaving .intro-scroll-cue{opacity:0}
         .scramble-text{display:inline-block;min-width:max-content;font-variant-numeric:tabular-nums}
         .lookbook-info h2 .scramble-text{display:block}
-        @media(prefers-reduced-motion:reduce){.ascii-intro-overlay{transition-duration:.35s}.intro-scroll-cue{opacity:.78;transform:translateX(-50%)}}
+        @media(prefers-reduced-motion:reduce){.ascii-intro-overlay{transition-duration:.35s}.intro-scroll-cue{opacity:.9;transform:translateX(-50%)}}
       `}</style>
 
       <AsciiIntro />

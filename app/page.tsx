@@ -3,10 +3,13 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 const projects = [
-  { number: '01', title: 'VOID FORM', year: '2026', image: 'https://images.unsplash.com/photo-1539109136881-3be0616acf4b?auto=format&fit=crop&w=1800&q=85' },
-  { number: '02', title: 'SILENT STRUCTURE', year: '2026', image: 'https://images.unsplash.com/photo-1509631179647-0177331693ae?auto=format&fit=crop&w=1800&q=85' },
-  { number: '03', title: 'NOIR MOTION', year: '2025', image: 'https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=1800&q=85' },
+  { number: '01', title: 'GARMENT I', year: '2026', image: '/images/garment-1-6.jpg' },
+  { number: '02', title: 'GARMENT II', year: '2026', image: '/images/garment-2-3.jpg' },
+  { number: '03', title: 'GLISTEN NOIR', year: '2026', image: '/images/book-6.jpg' },
 ];
+
+const bookPages = ['book-1', 'book-2', 'book-3', 'book-4', 'book-6', 'book-7', 'book-8'];
+const garmentStudies = ['garment-1-5', 'garment-2-2', 'garment-2-4', 'garment-2-5', 'garment-2-6'];
 
 const asciiTexture = `
 FASHION_001  //////  FORM_002
@@ -625,10 +628,10 @@ export default function Home() {
         <p className="hero-label hero-label-right">Los Angeles · 2026</p>
         <h1 aria-label="Jimmy"><span>J</span><span>I</span><span>M</span><span>M</span><span>Y</span></h1>
         <div className="hero-image-wrap">
-          <img className="hero-image" src="https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1800&q=90" alt="Fashion garments on a clothing rack" />
+          <img className="hero-image" src="/images/garment-2-1.jpg" alt="Black sculpted dress from the Glisten Noir collection on a dress form" />
           <div className="dot-screen" aria-hidden="true" />
         </div>
-        <p className="hero-statement">Selected collections<br />and garment studies.</p>
+        <p className="hero-statement">Glisten Noir<br />Winter 2026 Collection.</p>
       </section>
 
       <section className="ticker"><div>FASHION DESIGN — COLLECTIONS — GARMENTS — FORM — TEXTURE — FASHION DESIGN — COLLECTIONS —</div></section>
@@ -639,7 +642,7 @@ export default function Home() {
           {projects.map((project, index) => (
             <article className={`lookbook-card card-${index + 1}`} key={project.number} data-reveal>
               <div className="lookbook-image">
-                <img src={project.image} alt={`${project.title} fashion collection`} />
+                <img src={project.image} alt={`${project.title}, Glisten Noir collection`} />
                 <div className="ascii-hover" aria-hidden="true"><pre>{asciiTexture}</pre></div>
               </div>
               <div className="lookbook-info">
@@ -647,6 +650,28 @@ export default function Home() {
                 <h2><ScrambleText text={project.title} className="scramble-text" /></h2>
                 <p>{project.year}</p>
               </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="lookbook book" id="collection">
+        <div className="section-head"><span>Glisten Noir — Collection Book</span><span>Winter 2026</span></div>
+        <div className="book-grid">
+          {bookPages.map((page, index) => (
+            <article className="lookbook-card" key={page} data-reveal>
+              <div className="lookbook-image"><img src={`/images/${page}.jpg`} alt={`Glisten Noir collection book, page ${index + 1}`} loading="lazy" /></div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="lookbook studies">
+        <div className="section-head"><span>Garment Studies</span><span>{String(garmentStudies.length).padStart(2, '0')} Views</span></div>
+        <div className="studies-grid">
+          {garmentStudies.map((image, index) => (
+            <article className="lookbook-card" key={image} data-reveal>
+              <div className="lookbook-image"><img src={`/images/${image}.jpg`} alt={`Glisten Noir garment detail, view ${index + 1}`} loading="lazy" /></div>
             </article>
           ))}
         </div>

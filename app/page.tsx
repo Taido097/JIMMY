@@ -686,6 +686,7 @@ export default function Home() {
 
       <section className="section contact" id="contact">
         <div className="section-head"><h2><ScrambleText text="GET IN TOUCH" className="scramble-text" /></h2></div>
+        <div className="contact-body">
         <form className="contact-form" action="mailto:hello@jimmy.studio" method="post" encType="text/plain" data-reveal>
           <label><ScrambleText text="Name" className="scramble-text" /><input type="text" name="name" required /></label>
           <label><ScrambleText text="Email" className="scramble-text" /><input type="email" name="email" required /></label>
@@ -693,6 +694,8 @@ export default function Home() {
           <label><ScrambleText text="Message" className="scramble-text" /><textarea name="message" rows={4} required /></label>
           <button type="submit"><ScrambleText text="SEND INQUIRY ↗" className="scramble-text" /></button>
         </form>
+          <p className="contact-mark" data-reveal><ScrambleText text="JIMMY" className="scramble-text" /></p>
+        </div>
         <footer>
           <nav><a href="mailto:hello@jimmy.studio"><ScrambleText text="EMAIL" className="scramble-text" /></a><a href="#"><ScrambleText text="INSTAGRAM" className="scramble-text" /></a></nav>
           <span><ScrambleText text="©2026" className="scramble-text" /></span>

@@ -2,25 +2,34 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
-const projects = [
-  { number: '01', title: 'GARMENT I', year: '2026', image: '/images/garment-1-6.jpg' },
-  { number: '02', title: 'GARMENT II', year: '2026', image: '/images/garment-2-3.jpg' },
-  { number: '03', title: 'GLISTEN NOIR', year: '2026', image: '/images/book-6.jpg' },
+const works = [
+  { title: 'GARMENT I', text: 'Sculpted shoulders and an open keyhole back', image: 'garment-1-6' },
+  { title: 'GARMENT II', text: 'A structured bodice cut away to the form', image: 'garment-2-3' },
+  { title: 'GLISTEN NOIR', text: 'Winter 2026 collection, full silhouette', image: 'garment-2-1' },
+  { title: 'SILHOUETTE STUDY', text: 'Movement and volume in profile', image: 'garment-2-4' },
 ];
 
-const bookPages = ['book-1', 'book-2', 'book-3', 'book-4', 'book-6', 'book-7', 'book-8'];
-const garmentStudies = ['garment-1-5', 'garment-2-2', 'garment-2-4', 'garment-2-5', 'garment-2-6'];
+const bookPages = [
+  { title: 'CONCEPT', image: 'book-2' },
+  { title: 'MOODBOARD', image: 'book-3' },
+  { title: 'PROCESS', image: 'book-4' },
+  { title: 'LINEUP', image: 'book-6' },
+  { title: 'GARMENT I', image: 'book-7' },
+  { title: 'GARMENT II', image: 'book-8' },
+];
 
-const asciiTexture = `
-FASHION_001  //////  FORM_002
-................................
-:: :: ::: :::: :: ::: :::: :: ::
-................................
-GARMENT / SILHOUETTE / MOVEMENT
-:: :: ::: :::: :: ::: :::: :: ::
-................................
-JIMMY_2026  //////  ARCHIVE_03
-`;
+const archives = ['book-1', 'garment-1-5', 'garment-2-2', 'garment-2-6'];
+
+function LaClock() {
+  const [time, setTime] = useState('');
+  useEffect(() => {
+    const format = () => setTime(new Date().toLocaleTimeString('en-US', { timeZone: 'America/Los_Angeles' }));
+    format();
+    const timer = window.setInterval(format, 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+  return <span className="clock">LA {time}</span>;
+}
 
 const scrambleChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#$%&@*?/';
 const introChars = 'NO0A869452I3?!<>=+/:-· ';
@@ -605,7 +614,6 @@ export default function Home() {
         .ascii-intro-overlay.is-started .intro-enter-cue,.ascii-intro-overlay.is-leaving .intro-enter-cue{opacity:0}
         .intro-mobile-cue{display:none}
         .scramble-text{display:inline-block;min-width:max-content;font-variant-numeric:tabular-nums}
-        .lookbook-info h2 .scramble-text{display:block}
         @media(hover:hover) and (pointer:fine){.ascii-intro-overlay.is-ready:not(.is-started){cursor:none}}
         @media(max-width:799px){.intro-desktop-cue{display:none}.intro-mobile-cue{display:inline}.intro-enter-cue{bottom:18px;font-size:9px}}
         @media(prefers-reduced-motion:reduce){.ascii-intro-overlay{transition-duration:.35s}.ascii-intro-overlay.is-ready:not(.is-started) .intro-enter-cue{opacity:.8;transform:translateX(-50%)}}
@@ -614,95 +622,81 @@ export default function Home() {
       <AsciiIntro />
 
       <header className="nav">
-        <a className="brand" href="#top">JIMMY®</a>
+        <a className="brand" href="#top">JIMMY©</a>
         <nav>
-          <a href="#work"><ScrambleText text="WORK" className="scramble-text" /></a>
-          <a href="#about"><ScrambleText text="ABOUT" className="scramble-text" /></a>
+          <a href="#top"><ScrambleText text="HOME" className="scramble-text" /></a>
+          <a href="#work"><ScrambleText text="WORKS" className="scramble-text" /></a>
+          <a href="#archives"><ScrambleText text="ARCHIVES" className="scramble-text" /></a>
           <a href="#contact"><ScrambleText text="CONTACT" className="scramble-text" /></a>
         </nav>
+        <LaClock />
       </header>
 
       <section className="hero" id="top">
-        <div className="ascii-layer ascii-right" aria-hidden="true"><pre>{asciiTexture}</pre></div>
-        <p className="hero-label hero-label-left">Fashion Designer</p>
-        <p className="hero-label hero-label-right">Los Angeles · 2026</p>
-        <h1 aria-label="Jimmy"><span>J</span><span>I</span><span>M</span><span>M</span><span>Y</span></h1>
-        <div className="hero-image-wrap">
-          <img className="hero-image" src="/images/garment-2-1.jpg" alt="Black sculpted dress from the Glisten Noir collection on a dress form" />
-          <div className="dot-screen" aria-hidden="true" />
-        </div>
-        <p className="hero-statement">Glisten Noir<br />Winter 2026 Collection.</p>
+        <h1>JIMMY</h1>
+        <p>FASHION DESIGNER FROM LOS ANGELES</p>
       </section>
 
-      <section className="ticker"><div>FASHION DESIGN — COLLECTIONS — GARMENTS — FORM — TEXTURE — FASHION DESIGN — COLLECTIONS —</div></section>
-
-      <section className="lookbook" id="work">
-        <div className="section-head"><span>Selected Collections</span><span>2025—2026</span></div>
-        <div className="lookbook-grid">
-          {projects.map((project, index) => (
-            <article className={`lookbook-card card-${index + 1}`} key={project.number} data-reveal>
-              <div className="lookbook-image">
-                <img src={project.image} alt={`${project.title}, Glisten Noir collection`} />
-                <div className="ascii-hover" aria-hidden="true"><pre>{asciiTexture}</pre></div>
-              </div>
-              <div className="lookbook-info">
-                <span>{project.number}</span>
-                <h2><ScrambleText text={project.title} className="scramble-text" /></h2>
-                <p>{project.year}</p>
-              </div>
+      <section className="section" id="work">
+        <div className="section-head"><h2>SELECTED WORKS</h2><a href="#archives">SEE ARCHIVES</a></div>
+        <div className="works-grid">
+          {works.map((work) => (
+            <article className="work" key={work.title} data-reveal>
+              <div className="media"><img src={`/images/${work.image}.jpg`} alt={`${work.title}, Glisten Noir collection`} /></div>
+              <h3><ScrambleText text={work.title} className="scramble-text" /></h3>
+              <p>{work.text}</p>
             </article>
           ))}
         </div>
       </section>
 
-      <section className="lookbook book" id="collection">
-        <div className="section-head"><span>Glisten Noir — Collection Book</span><span>Winter 2026</span></div>
-        <div className="book-grid">
-          {bookPages.map((page, index) => (
-            <article className="lookbook-card" key={page} data-reveal>
-              <div className="lookbook-image"><img src={`/images/${page}.jpg`} alt={`Glisten Noir collection book, page ${index + 1}`} loading="lazy" /></div>
+      <section className="section" id="collection">
+        <div className="section-head"><h2>COLLECTION BOOK</h2><span>GLISTEN NOIR · WINTER 2026</span></div>
+        <div className="tiles-grid">
+          {bookPages.map((page) => (
+            <article className="tile" key={page.image} data-reveal>
+              <img src={`/images/${page.image}.jpg`} alt={`Glisten Noir collection book, ${page.title.toLowerCase()} page`} loading="lazy" />
+              <span>{page.title}</span><i aria-hidden="true">+</i>
             </article>
           ))}
         </div>
       </section>
 
-      <section className="lookbook studies">
-        <div className="section-head"><span>Garment Studies</span><span>{String(garmentStudies.length).padStart(2, '0')} Views</span></div>
-        <div className="studies-grid">
-          {garmentStudies.map((image, index) => (
-            <article className="lookbook-card" key={image} data-reveal>
-              <div className="lookbook-image"><img src={`/images/${image}.jpg`} alt={`Glisten Noir garment detail, view ${index + 1}`} loading="lazy" /></div>
-            </article>
+      <section className="section about" id="about">
+        <div>
+          <div className="section-head"><h2>ABOUT ME</h2></div>
+          <dl data-reveal>
+            <dt>WHAT I DO</dt><dd>I design garments focused on silhouette, structure, and movement.</dd>
+            <dt>MY BACKGROUND</dt><dd>Jimmy is a Los Angeles fashion designer building collections from concept boards to finished garments.</dd>
+            <dt>MY APPROACH</dt><dd>Glisten Noir explores self metamorphosis through darkness, using structure as a form of protection.</dd>
+            <dt>CURRENTLY</dt><dd>Taking custom pieces, collections, collaborations, and press inquiries.</dd>
+          </dl>
+        </div>
+        <div className="about-image" data-reveal><img src="/images/garment-2-5.jpg" alt="Glisten Noir garment detail on a dress form" loading="lazy" /></div>
+      </section>
+
+      <section className="section" id="archives">
+        <div className="section-head"><h2>ARCHIVES</h2><span>2025—2026</span></div>
+        <div className="archive-grid">
+          {archives.map((image, index) => (
+            <div className="media" key={image} data-reveal><img src={`/images/${image}.jpg`} alt={`Glisten Noir archive image ${index + 1}`} loading="lazy" /></div>
           ))}
         </div>
       </section>
 
-      <section className="ascii-break" aria-label="Animated fashion texture">
-        <div className="ascii-track" aria-hidden="true"><pre>{asciiTexture}{asciiTexture}{asciiTexture}</pre></div>
-        <p><ScrambleText text="FORM IN MOTION" className="scramble-text" /></p>
-      </section>
-
-      <section className="about" id="about" data-reveal>
-        <span>About</span>
-        <h2>Jimmy is a Los Angeles fashion designer focused on silhouette, structure, and movement.</h2>
-      </section>
-
-      <section className="contact" id="contact">
-        <div className="contact-copy" data-reveal>
-          <span>Get in touch</span>
-          <h2>START A<br />PROJECT.</h2>
-          <p>For custom pieces, collections, collaborations, and fashion inquiries.</p>
-        </div>
-
+      <section className="section contact" id="contact">
+        <div className="section-head"><h2>GET IN TOUCH</h2></div>
         <form className="contact-form" action="mailto:hello@jimmy.studio" method="post" encType="text/plain" data-reveal>
           <label>Name<input type="text" name="name" required /></label>
           <label>Email<input type="email" name="email" required /></label>
           <label>Inquiry type<select name="inquiry" defaultValue="Custom piece"><option>Custom piece</option><option>Collection</option><option>Collaboration</option><option>Press</option><option>Other</option></select></label>
-          <label>Message<textarea name="message" rows={5} required /></label>
+          <label>Message<textarea name="message" rows={4} required /></label>
           <button type="submit"><ScrambleText text="SEND INQUIRY ↗" className="scramble-text" /></button>
         </form>
-
-        <footer><span>Jimmy © 2026</span><span>Instagram</span><span>Los Angeles</span></footer>
+        <footer>
+          <nav><a href="mailto:hello@jimmy.studio">EMAIL</a><a href="#">INSTAGRAM</a></nav>
+          <span>©2026</span>
+        </footer>
       </section>
     </main>
   );

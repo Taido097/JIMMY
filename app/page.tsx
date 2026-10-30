@@ -28,7 +28,7 @@ function LaClock() {
     const timer = window.setInterval(format, 1000);
     return () => window.clearInterval(timer);
   }, []);
-  return <span className="clock">LA {time}</span>;
+  return <span className="clock">LA {time}</span>; // live clock text changes every second, so it is not scrambled
 }
 
 const scrambleChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#$%&@*?/';
@@ -622,7 +622,7 @@ export default function Home() {
       <AsciiIntro />
 
       <header className="nav">
-        <a className="brand" href="#top">JIMMY©</a>
+        <a className="brand" href="#top"><ScrambleText text="JIMMY©" className="scramble-text" /></a>
         <nav>
           <a href="#top"><ScrambleText text="HOME" className="scramble-text" /></a>
           <a href="#work"><ScrambleText text="WORKS" className="scramble-text" /></a>
@@ -633,30 +633,30 @@ export default function Home() {
       </header>
 
       <section className="hero" id="top">
-        <h1>JIMMY</h1>
-        <p>FASHION DESIGNER FROM LOS ANGELES</p>
+        <h1><ScrambleText text="JIMMY" className="scramble-text" /></h1>
+        <p><ScrambleText text="FASHION DESIGNER FROM LOS ANGELES" className="scramble-text" /></p>
       </section>
 
       <section className="section" id="work">
-        <div className="section-head"><h2>SELECTED WORKS</h2><a href="#archives">SEE ARCHIVES</a></div>
+        <div className="section-head"><h2><ScrambleText text="SELECTED WORKS" className="scramble-text" /></h2><a href="#archives"><ScrambleText text="SEE ARCHIVES" className="scramble-text" /></a></div>
         <div className="works-grid">
           {works.map((work) => (
             <article className="work" key={work.title} data-reveal>
               <div className="media"><img src={`/images/${work.image}.jpg`} alt={`${work.title}, Glisten Noir collection`} /></div>
               <h3><ScrambleText text={work.title} className="scramble-text" /></h3>
-              <p>{work.text}</p>
+              <p><ScrambleText text={work.text} className="scramble-text scramble-wrap" /></p>
             </article>
           ))}
         </div>
       </section>
 
       <section className="section" id="collection">
-        <div className="section-head"><h2>COLLECTION BOOK</h2><span>GLISTEN NOIR · WINTER 2026</span></div>
+        <div className="section-head"><h2><ScrambleText text="COLLECTION BOOK" className="scramble-text" /></h2><span><ScrambleText text="GLISTEN NOIR · WINTER 2026" className="scramble-text" /></span></div>
         <div className="tiles-grid">
           {bookPages.map((page) => (
             <article className="tile" key={page.image} data-reveal>
               <img src={`/images/${page.image}.jpg`} alt={`Glisten Noir collection book, ${page.title.toLowerCase()} page`} loading="lazy" />
-              <span>{page.title}</span><i aria-hidden="true">+</i>
+              <span><ScrambleText text={page.title} className="scramble-text" /></span><i aria-hidden="true">+</i>
             </article>
           ))}
         </div>
@@ -664,19 +664,19 @@ export default function Home() {
 
       <section className="section about" id="about">
         <div>
-          <div className="section-head"><h2>ABOUT ME</h2></div>
+          <div className="section-head"><h2><ScrambleText text="ABOUT ME" className="scramble-text" /></h2></div>
           <dl data-reveal>
-            <dt>WHAT I DO</dt><dd>I design garments focused on silhouette, structure, and movement.</dd>
-            <dt>MY BACKGROUND</dt><dd>Jimmy is a Los Angeles fashion designer building collections from concept boards to finished garments.</dd>
-            <dt>MY APPROACH</dt><dd>Glisten Noir explores self metamorphosis through darkness, using structure as a form of protection.</dd>
-            <dt>CURRENTLY</dt><dd>Taking custom pieces, collections, collaborations, and press inquiries.</dd>
+            <dt><ScrambleText text="WHAT I DO" className="scramble-text" /></dt><dd><ScrambleText text="I design garments focused on silhouette, structure, and movement." className="scramble-text scramble-wrap" /></dd>
+            <dt><ScrambleText text="MY BACKGROUND" className="scramble-text" /></dt><dd><ScrambleText text="Jimmy is a Los Angeles fashion designer building collections from concept boards to finished garments." className="scramble-text scramble-wrap" /></dd>
+            <dt><ScrambleText text="MY APPROACH" className="scramble-text" /></dt><dd><ScrambleText text="Glisten Noir explores self metamorphosis through darkness, using structure as a form of protection." className="scramble-text scramble-wrap" /></dd>
+            <dt><ScrambleText text="CURRENTLY" className="scramble-text" /></dt><dd><ScrambleText text="Taking custom pieces, collections, collaborations, and press inquiries." className="scramble-text scramble-wrap" /></dd>
           </dl>
         </div>
         <div className="about-image" data-reveal><img src="/images/garment-2-5.jpg" alt="Glisten Noir garment detail on a dress form" loading="lazy" /></div>
       </section>
 
       <section className="section" id="archives">
-        <div className="section-head"><h2>ARCHIVES</h2><span>2025—2026</span></div>
+        <div className="section-head"><h2><ScrambleText text="ARCHIVES" className="scramble-text" /></h2><span><ScrambleText text="2025—2026" className="scramble-text" /></span></div>
         <div className="archive-grid">
           {archives.map((image, index) => (
             <div className="media" key={image} data-reveal><img src={`/images/${image}.jpg`} alt={`Glisten Noir archive image ${index + 1}`} loading="lazy" /></div>
@@ -685,17 +685,17 @@ export default function Home() {
       </section>
 
       <section className="section contact" id="contact">
-        <div className="section-head"><h2>GET IN TOUCH</h2></div>
+        <div className="section-head"><h2><ScrambleText text="GET IN TOUCH" className="scramble-text" /></h2></div>
         <form className="contact-form" action="mailto:hello@jimmy.studio" method="post" encType="text/plain" data-reveal>
-          <label>Name<input type="text" name="name" required /></label>
-          <label>Email<input type="email" name="email" required /></label>
-          <label>Inquiry type<select name="inquiry" defaultValue="Custom piece"><option>Custom piece</option><option>Collection</option><option>Collaboration</option><option>Press</option><option>Other</option></select></label>
-          <label>Message<textarea name="message" rows={4} required /></label>
+          <label><ScrambleText text="Name" className="scramble-text" /><input type="text" name="name" required /></label>
+          <label><ScrambleText text="Email" className="scramble-text" /><input type="email" name="email" required /></label>
+          <label><ScrambleText text="Inquiry type" className="scramble-text" /><select name="inquiry" defaultValue="Custom piece"><option>Custom piece</option><option>Collection</option><option>Collaboration</option><option>Press</option><option>Other</option></select></label>
+          <label><ScrambleText text="Message" className="scramble-text" /><textarea name="message" rows={4} required /></label>
           <button type="submit"><ScrambleText text="SEND INQUIRY ↗" className="scramble-text" /></button>
         </form>
         <footer>
-          <nav><a href="mailto:hello@jimmy.studio">EMAIL</a><a href="#">INSTAGRAM</a></nav>
-          <span>©2026</span>
+          <nav><a href="mailto:hello@jimmy.studio"><ScrambleText text="EMAIL" className="scramble-text" /></a><a href="#"><ScrambleText text="INSTAGRAM" className="scramble-text" /></a></nav>
+          <span><ScrambleText text="©2026" className="scramble-text" /></span>
         </footer>
       </section>
     </main>

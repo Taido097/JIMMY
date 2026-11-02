@@ -18,7 +18,7 @@ const bookPages = [
   { title: 'GARMENT II', image: 'book-8' },
 ];
 
-const archives = ['book-1', 'garment-1-5', 'garment-2-2', 'garment-2-6'];
+const archives = ['book-1', 'garment-1-5', 'garment-2-2', 'garment-2-5', 'garment-2-6'];
 
 function LaClock() {
   const [time, setTime] = useState('');
@@ -672,7 +672,7 @@ export default function Home() {
             <dt><ScrambleText text="CURRENTLY" className="scramble-text" /></dt><dd><ScrambleText text="Taking custom pieces, collections, collaborations, and press inquiries." className="scramble-text scramble-wrap" /></dd>
           </dl>
         </div>
-        <div className="about-image" data-reveal><img src="/images/garment-2-5.jpg" alt="Glisten Noir garment detail on a dress form" loading="lazy" /></div>
+        <div className="about-image" data-reveal><img src="/images/jimmy-portrait.jpg" alt="Portrait of Jimmy seated in a chair" loading="lazy" /></div>
       </section>
 
       <section className="section" id="archives">

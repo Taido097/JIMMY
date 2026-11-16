@@ -636,7 +636,7 @@ export default function Home() {
         <a className="brand" href="#top"><ScrambleText text="JIMMY©" className="scramble-text" /></a>
         <nav>
           <a href="#top"><ScrambleText text="HOME" className="scramble-text" /></a>
-          <a href="#big-projects"><ScrambleText text="BIG PROJECTS" className="scramble-text" /></a>
+          <a href="#glisten-noir"><ScrambleText text="GLISTEN NOIR" className="scramble-text" /></a>
           <a href="#collaged"><ScrambleText text="COLLAGED" className="scramble-text" /></a>
           <a href="#clo3d"><ScrambleText text="CLO3D" className="scramble-text" /></a>
           <a href="#contact"><ScrambleText text="CONTACT" className="scramble-text" /></a>
@@ -649,7 +649,7 @@ export default function Home() {
         <p><ScrambleText text="FASHION DESIGNER FROM LOS ANGELES" className="scramble-text" /></p>
       </section>
 
-      <div className="category" id="big-projects"><span>01</span><h2><ScrambleText text="BIG PROJECTS" className="scramble-text" /></h2></div>
+      <div className="category" id="glisten-noir"><span>01</span><h2><ScrambleText text="GLISTEN NOIR PROJECT" className="scramble-text scramble-wrap" /></h2></div>
 
       <section className="section" id="work">
         <div className="section-head"><h2><ScrambleText text="SELECTED WORKS" className="scramble-text" /></h2><a href="#archives"><ScrambleText text="SEE ARCHIVES" className="scramble-text" /></a></div>

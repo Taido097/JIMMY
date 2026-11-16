@@ -18,6 +18,17 @@ const bookPages = [
   { title: 'GARMENT II', image: 'book-8' },
 ];
 
+const collages = [
+  { title: 'SHAPE AND STRUCTURE', images: ['shape-1', 'shape-2', 'shape-3'] },
+  { title: 'UNORTHODOX AND MATERIAL', images: ['material-1', 'material-2', 'material-3', 'material-4'] },
+  { title: 'DECONSTRUCTION', images: ['decon-1', 'decon-2', 'decon-3'] },
+];
+
+const clo3d = [
+  { title: 'BLAZER', sheet: 'blazer-sheet', views: ['blazer-1', 'blazer-2', 'blazer-3', 'blazer-4'] },
+  { title: 'COAT', sheet: 'coat-sheet', views: ['coat-1', 'coat-2', 'coat-3'] },
+];
+
 const archives = ['book-1', 'garment-1-5', 'garment-2-2', 'garment-2-5', 'garment-2-6'];
 
 function LaClock() {
@@ -625,8 +636,9 @@ export default function Home() {
         <a className="brand" href="#top"><ScrambleText text="JIMMY©" className="scramble-text" /></a>
         <nav>
           <a href="#top"><ScrambleText text="HOME" className="scramble-text" /></a>
-          <a href="#work"><ScrambleText text="WORKS" className="scramble-text" /></a>
-          <a href="#archives"><ScrambleText text="ARCHIVES" className="scramble-text" /></a>
+          <a href="#big-projects"><ScrambleText text="BIG PROJECTS" className="scramble-text" /></a>
+          <a href="#collaged"><ScrambleText text="COLLAGED" className="scramble-text" /></a>
+          <a href="#clo3d"><ScrambleText text="CLO3D" className="scramble-text" /></a>
           <a href="#contact"><ScrambleText text="CONTACT" className="scramble-text" /></a>
         </nav>
         <LaClock />
@@ -636,6 +648,8 @@ export default function Home() {
         <h1><ScrambleText text="JIMMY" className="scramble-text" /></h1>
         <p><ScrambleText text="FASHION DESIGNER FROM LOS ANGELES" className="scramble-text" /></p>
       </section>
+
+      <div className="category" id="big-projects"><span>01</span><h2><ScrambleText text="BIG PROJECTS" className="scramble-text" /></h2></div>
 
       <section className="section" id="work">
         <div className="section-head"><h2><ScrambleText text="SELECTED WORKS" className="scramble-text" /></h2><a href="#archives"><ScrambleText text="SEE ARCHIVES" className="scramble-text" /></a></div>
@@ -662,6 +676,42 @@ export default function Home() {
         </div>
       </section>
 
+      <section className="section" id="archives">
+        <div className="section-head"><h2><ScrambleText text="ARCHIVES" className="scramble-text" /></h2><span><ScrambleText text="2025—2026" className="scramble-text" /></span></div>
+        <div className="archive-grid">
+          {archives.map((image, index) => (
+            <div className="media" key={image} data-reveal><img src={`/images/${image}.jpg`} alt={`Glisten Noir archive image ${index + 1}`} loading="lazy" /></div>
+          ))}
+        </div>
+      </section>
+
+      <div className="category" id="collaged"><span>02</span><h2><ScrambleText text="EXPERIMENTAL DIGITAL COLLAGED" className="scramble-text scramble-wrap" /></h2></div>
+
+      {collages.map((project, index) => (
+        <section className="section" key={project.title}>
+          <div className="section-head"><h2><ScrambleText text={project.title} className="scramble-text scramble-wrap" /></h2><span><ScrambleText text={`0${index + 1} / 03`} className="scramble-text" /></span></div>
+          <div className="collage-grid" style={{ '--cols': project.images.length - 1 } as React.CSSProperties}>
+            {project.images.map((image, i) => (
+              <div className="media" key={image} data-reveal><img src={`/images/${image}.jpg`} alt={`${project.title.toLowerCase()} digital collage, board ${i + 1}`} loading="lazy" /></div>
+            ))}
+          </div>
+        </section>
+      ))}
+
+      <div className="category" id="clo3d"><span>03</span><h2><ScrambleText text="CLO3D PROJECT" className="scramble-text" /></h2></div>
+
+      {clo3d.map((project) => (
+        <section className="section" key={project.title}>
+          <div className="section-head"><h2><ScrambleText text={project.title} className="scramble-text scramble-wrap" /></h2><span><ScrambleText text="CLO3D EXERCISE" className="scramble-text" /></span></div>
+          <div className="media clo-sheet" data-reveal><img src={`/images/${project.sheet}.jpg`} alt={`${project.title.toLowerCase()} Clo3D turnaround`} loading="lazy" /></div>
+          <div className="clo-views" style={{ '--cols': project.views.length } as React.CSSProperties}>
+            {project.views.map((image, i) => (
+              <div className="media" key={image} data-reveal><img src={`/images/${image}.jpg`} alt={`${project.title.toLowerCase()} Clo3D render, view ${i + 1}`} loading="lazy" /></div>
+            ))}
+          </div>
+        </section>
+      ))}
+
       <section className="section about" id="about">
         <div>
           <div className="section-head"><h2><ScrambleText text="ABOUT ME" className="scramble-text" /></h2></div>
@@ -673,15 +723,6 @@ export default function Home() {
           </dl>
         </div>
         <div className="about-image" data-reveal><img src="/images/jimmy-portrait.jpg" alt="Portrait of Jimmy seated in a chair" loading="lazy" /></div>
-      </section>
-
-      <section className="section" id="archives">
-        <div className="section-head"><h2><ScrambleText text="ARCHIVES" className="scramble-text" /></h2><span><ScrambleText text="2025—2026" className="scramble-text" /></span></div>
-        <div className="archive-grid">
-          {archives.map((image, index) => (
-            <div className="media" key={image} data-reveal><img src={`/images/${image}.jpg`} alt={`Glisten Noir archive image ${index + 1}`} loading="lazy" /></div>
-          ))}
-        </div>
       </section>
 
       <section className="section contact" id="contact">
